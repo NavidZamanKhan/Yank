@@ -9,13 +9,13 @@ class YankWordmark extends StatelessWidget {
   final double size;
   @override
   Widget build(BuildContext context) => Text(
-    'Yank',
+    'yank',
     semanticsLabel: 'Yank',
     style: TextStyle(
       fontSize: size,
       height: 1,
       fontWeight: FontWeight.w800,
-      letterSpacing: -1.4,
+      letterSpacing: -1.8,
       color: context.colors.ink,
     ),
   );
