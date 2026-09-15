@@ -109,7 +109,11 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
 
-    final finalTopLeft = tester.getTopLeft(cardFinder);
-    expect((finalTopLeft.dx - initialTopLeft.dx).abs(), lessThan(1.0));
+    // Verify the item has been archived in the bloc state
+    expect(bloc.state.item(item.id)?.archived, isTrue);
+
+    // Verify the card slot collapsed its height to 0
+    final size = tester.getSize(find.byType(SizeTransition).last);
+    expect(size.height, equals(0.0));
   });
 }

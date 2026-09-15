@@ -183,31 +183,46 @@ class _ClampedSwipeCard extends StatefulWidget {
 }
 
 class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const double _triggerThreshold = 56.0;
   static const double _maxTravel = 80.0;
 
-  late final AnimationController _controller;
-  Animation<double>? _animation;
+  late final AnimationController _springController;
+  late final AnimationController _collapseController;
+  late final Animation<double> _sizeFactorAnimation;
+  Animation<double>? _slideAnimation;
   double _dragOffset = 0.0;
   bool _hasTriggeredHaptic = false;
+  bool _isDismissing = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _springController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 240),
     )..addListener(() {
         setState(() {
-          _dragOffset = _animation?.value ?? 0.0;
+          _dragOffset = _slideAnimation?.value ?? 0.0;
         });
       });
+
+    _collapseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _sizeFactorAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _collapseController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _springController.dispose();
+    _collapseController.dispose();
     super.dispose();
   }
 
@@ -224,12 +239,14 @@ class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
   }
 
   void _onHorizontalDragStart(DragStartDetails details) {
-    if (_controller.isAnimating) {
-      _controller.stop();
+    if (_isDismissing) return;
+    if (_springController.isAnimating) {
+      _springController.stop();
     }
   }
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (_isDismissing) return;
     final newRaw = _dragOffset + details.delta.dx;
     final clamped = _clampDrag(newRaw);
 
@@ -246,36 +263,62 @@ class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_isDismissing) return;
     final reachedRight = _dragOffset >= _triggerThreshold;
     final reachedLeft = _dragOffset <= -_triggerThreshold;
 
     if (reachedRight) {
       widget.onSwipeRight();
+      _springBack();
     } else if (reachedLeft) {
-      widget.onSwipeLeft();
+      _dismissAndArchive();
+    } else {
+      _springBack();
     }
-
-    _hasTriggeredHaptic = false;
-    _animation = Tween<double>(
-      begin: _dragOffset,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
-    _controller.forward(from: 0.0);
   }
 
   void _onHorizontalDragCancel() {
+    if (_isDismissing) return;
+    _springBack();
+  }
+
+  void _springBack() {
     _hasTriggeredHaptic = false;
-    _animation = Tween<double>(
+    _slideAnimation = Tween<double>(
       begin: _dragOffset,
       end: 0.0,
     ).animate(CurvedAnimation(
-      parent: _controller,
+      parent: _springController,
       curve: Curves.easeOutCubic,
     ));
-    _controller.forward(from: 0.0);
+    _springController.duration = const Duration(milliseconds: 240);
+    _springController.forward(from: 0.0);
+  }
+
+  Future<void> _dismissAndArchive() async {
+    setState(() {
+      _isDismissing = true;
+      _hasTriggeredHaptic = false;
+    });
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    _slideAnimation = Tween<double>(
+      begin: _dragOffset,
+      end: -screenWidth * 0.9,
+    ).animate(CurvedAnimation(
+      parent: _springController,
+      curve: Curves.easeInCubic,
+    ));
+    _springController.duration = const Duration(milliseconds: 160);
+    await _springController.forward(from: 0.0);
+
+    if (!mounted) return;
+
+    await _collapseController.forward(from: 0.0);
+
+    if (!mounted) return;
+
+    widget.onSwipeLeft();
   }
 
   @override
@@ -284,52 +327,65 @@ class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
     final isSwipingLeft = _dragOffset < 0;
     final progress = (_dragOffset.abs() / _triggerThreshold).clamp(0.0, 1.0);
     final pastThreshold = _dragOffset.abs() >= _triggerThreshold;
+    final dismissOpacity = _isDismissing
+        ? (1.0 - _springController.value).clamp(0.0, 1.0)
+        : 1.0;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        if (isSwipingRight || isSwipingLeft)
-          Positioned.fill(
-            child: Container(
-              alignment: isSwipingRight
-                  ? Alignment.centerLeft
-                  : Alignment.centerRight,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: context.colors.tint,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Transform.scale(
-                scale: 0.8 + (progress * 0.2),
-                child: Opacity(
-                  opacity: 0.4 + (progress * 0.6),
-                  child: Icon(
-                    isSwipingRight
-                        ? LucideIcons.arrowDownLeft
-                        : (widget.isArchived
-                            ? LucideIcons.archiveRestore
-                            : LucideIcons.archive),
-                    color: pastThreshold
-                        ? context.colors.iris
-                        : context.colors.muted,
-                    size: 20,
+    return SizeTransition(
+      sizeFactor: _sizeFactorAnimation,
+      alignment: Alignment.topCenter,
+      child: IgnorePointer(
+        ignoring: _isDismissing,
+        child: Opacity(
+          opacity: dismissOpacity,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (isSwipingRight || isSwipingLeft)
+                Positioned.fill(
+                  child: Container(
+                    alignment: isSwipingRight
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: context.colors.tint,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Transform.scale(
+                      scale: 0.8 + (progress * 0.2),
+                      child: Opacity(
+                        opacity: 0.4 + (progress * 0.6),
+                        child: Icon(
+                          isSwipingRight
+                              ? LucideIcons.arrowDownLeft
+                              : (widget.isArchived
+                                  ? LucideIcons.archiveRestore
+                                  : LucideIcons.archive),
+                          color: pastThreshold
+                              ? context.colors.iris
+                              : context.colors.muted,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
+              GestureDetector(
+                onHorizontalDragStart: _onHorizontalDragStart,
+                onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                onHorizontalDragCancel: _onHorizontalDragCancel,
+                behavior: HitTestBehavior.opaque,
+                child: Transform.translate(
+                  offset: Offset(_dragOffset, 0),
+                  child: widget.child,
+                ),
               ),
-            ),
-          ),
-        GestureDetector(
-          onHorizontalDragStart: _onHorizontalDragStart,
-          onHorizontalDragUpdate: _onHorizontalDragUpdate,
-          onHorizontalDragEnd: _onHorizontalDragEnd,
-          onHorizontalDragCancel: _onHorizontalDragCancel,
-          behavior: HitTestBehavior.opaque,
-          child: Transform.translate(
-            offset: Offset(_dragOffset, 0),
-            child: widget.child,
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
