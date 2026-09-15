@@ -55,13 +55,13 @@ class LibraryFeed extends StatelessWidget {
       child: ListView.builder(
         key: PageStorageKey(filterKey),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(wide ? 24 : 15, 9, wide ? 24 : 15, 20),
+        padding: EdgeInsets.fromLTRB(wide ? 24 : 15, 12, wide ? 24 : 15, 24),
         itemCount: entries.length,
         itemBuilder: (context, index) {
           final entry = entries[index];
           if (entry is String) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(4, index == 0 ? 1 : 13, 4, 10),
+              padding: EdgeInsets.fromLTRB(4, index == 0 ? 4 : 22, 4, 12),
               child: Text(
                 entry,
                 style: Theme.of(context).textTheme.bodySmall
@@ -72,7 +72,7 @@ class LibraryFeed extends StatelessWidget {
           final item = entry as YankItem;
           return Padding(
             key: ValueKey(item.id),
-            padding: const EdgeInsets.only(bottom: 9),
+            padding: const EdgeInsets.only(bottom: 14),
             child: YankItemCard(
               item: item,
               availability: state.availability(item.id),

@@ -65,18 +65,18 @@ class YankItemCard extends StatelessWidget {
       ],
     );
     final row = Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 3, 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
       child: Row(
         children: [
           if ((item.kind == ItemKind.link || item.kind == ItemKind.file) &&
               MediaQuery.sizeOf(context).width > 360 &&
               MediaQuery.textScalerOf(context).scale(14) < 19) ...[
             Container(
-              width: 34,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: context.colors.canvas,
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 item.kind == ItemKind.file
@@ -87,7 +87,7 @@ class YankItemCard extends StatelessWidget {
                 size: 17,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
           ],
           Expanded(child: copy),
           const SizedBox(width: 4),
