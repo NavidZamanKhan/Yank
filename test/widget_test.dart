@@ -1,30 +1,57 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:yank/main.dart';
+import 'package:yank/app/yank_app.dart';
+import 'package:yank/features/audio/repositories/audio_repository.dart';
+import 'package:yank/features/library/repositories/demo_library_repository.dart';
+import 'package:yank/features/library/repositories/metadata_store.dart';
+import 'package:yank/features/settings/repositories/settings_repository.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  for (final width in [320.0, 390.0, 1440.0]) {
+    testWidgets('library and search fit at width $width', (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = MemoryMetadataStore();
+      final repository = await DemoLibraryRepository.open(store);
+      await tester.pumpWidget(
+        YankApp(
+          library: repository,
+          settingsRepository: SettingsRepository(store),
+          initialAppearance: const AppearanceSettings(),
+          audioFactory: _SilentAudio.new,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.enterText(find.byType(TextField).first, 'first rough');
+      await tester.pumpAndSettle();
+      expect(find.text('The first rough idea'), findsOneWidget);
+      expect(find.text('Flutter animation guide'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
+}
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
-  });
+class _SilentAudio implements AudioRepository {
+  final _controller = StreamController<AudioFrame>.broadcast();
+  @override
+  Stream<AudioFrame> get frames => _controller.stream;
+  @override
+  Future<void> play(String id, String asset) async {}
+  @override
+  Future<void> pause() async {}
+  @override
+  Future<void> resume() async {}
+  @override
+  Future<void> seek(Duration position) async {}
+  @override
+  Future<void> stop() async {}
+  @override
+  Future<void> close() => _controller.close();
 }
