@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "106375247397",
+    "project_id": "yank-b3078",
+    "storage_bucket": "yank-b3078.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:106375247397:android:2093b6591200d59264f1cc",
+        "android_client_info": {
+          "package_name": "com.example.yank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIqd02kTVhcVyNaUMW3V7dUQxxCA5c9dI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

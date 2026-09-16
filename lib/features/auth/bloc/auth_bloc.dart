@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../models/auth_failure.dart';
 import '../models/auth_input.dart';
 import '../repositories/auth_repository.dart';
 import 'auth_event.dart';
@@ -168,6 +169,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(const AuthState(mode: AuthMode.logIn));
           }
       }
+    } on AuthFailure catch (e) {
+      if (emit.isDone) {
+        return;
+      }
+      emit(
+        state.copyWith(
+          activity: AuthActivity.idle,
+          message: e.message,
+          noticeSerial: state.noticeSerial + 1,
+        ),
+      );
     } catch (_) {
       if (emit.isDone) {
         return;

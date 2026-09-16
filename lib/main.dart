@@ -2,13 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+
 import 'app/yank_app.dart';
 import 'core/theme/yank_theme.dart';
+import 'features/auth/repositories/auth_repository.dart';
 import 'features/auth/repositories/demo_auth_repository.dart';
+import 'features/auth/repositories/firebase_auth_repository.dart';
 import 'features/library/repositories/demo_fixtures.dart';
 import 'features/library/repositories/demo_library_repository.dart';
 import 'features/library/repositories/preferences_metadata_store.dart';
 import 'features/settings/repositories/settings_repository.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +37,16 @@ Future<void> _start({bool reset = false}) async {
     final settingsRepository = SettingsRepository(store);
     final appearance = await settingsRepository.load();
     final library = await DemoLibraryRepository.open(store);
-    final auth = await DemoAuthRepository.open(store);
+    AuthRepository auth;
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      auth = FirebaseAuthRepository();
+    } catch (e) {
+      debugPrint('Firebase init fallback to demo auth: $e');
+      auth = await DemoAuthRepository.open(store);
+    }
     runApp(
       YankApp(
         authRepository: auth,
