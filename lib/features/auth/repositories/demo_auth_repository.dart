@@ -70,5 +70,26 @@ class DemoAuthRepository implements AuthRepository {
   Future<AuthUser> createAccount(String email, String password) =>
       _emailSession(email, password);
   @override
+  Future<void> sendSignUpOtp(String email) async {
+    if (AuthInput.emailError(email) != null) {
+      throw const FormatException('Invalid email address for OTP.');
+    }
+    // Simulate short network delay in demo mode.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+
+  @override
+  Future<AuthUser> verifySignUpOtp({
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    if (AuthInput.otpError(otp) != null) {
+      throw const FormatException('Invalid verification code.');
+    }
+    return _emailSession(email, password);
+  }
+
+  @override
   Future<void> signOut() => _commit(null);
 }

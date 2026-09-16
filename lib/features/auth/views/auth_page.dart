@@ -8,6 +8,7 @@ import '../../../core/widgets/yank_controls.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/auth_card_stack.dart';
 import '../widgets/auth_email_form.dart';
+import '../widgets/auth_otp_form.dart';
 import '../widgets/google_auth_button.dart';
 
 class AuthPage extends StatelessWidget {
@@ -93,7 +94,9 @@ class AuthPage extends StatelessWidget {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  state.isSignUp
+                                                  state.isVerifyingOtp
+                                                      ? 'Verify your email.'
+                                                      : state.isSignUp
                                                       ? 'Make yourself at home.'
                                                       : 'Your space is waiting.',
                                                   style: Theme.of(context)
@@ -102,7 +105,9 @@ class AuthPage extends StatelessWidget {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 Text(
-                                                  state.isSignUp
+                                                  state.isVerifyingOtp
+                                                      ? 'Almost there. One quick step.'
+                                                      : state.isSignUp
                                                       ? 'A good place to start.'
                                                       : 'Pick up where you left off.',
                                                   style: Theme.of(context)
@@ -157,7 +162,8 @@ class _Introduction extends StatelessWidget {
   final bool wide, compact;
   @override
   Widget build(BuildContext context) {
-    final showArtwork = wide || !state.emailExpanded;
+    final showArtwork =
+        wide || (!state.emailExpanded && !state.isVerifyingOtp);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -187,12 +193,18 @@ class _Introduction extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: state.isSignUp
+                  text: state.isVerifyingOtp
+                      ? 'Almost\n'
+                      : state.isSignUp
                       ? 'Everything worth\n'
                       : 'Good to have\n',
                 ),
                 TextSpan(
-                  text: state.isSignUp ? 'keeping.' : 'you back.',
+                  text: state.isVerifyingOtp
+                      ? 'there.'
+                      : state.isSignUp
+                      ? 'keeping.'
+                      : 'you back.',
                   style: TextStyle(color: context.colors.iris),
                 ),
               ],
@@ -200,7 +212,7 @@ class _Introduction extends StatelessWidget {
             style: TextStyle(
               fontSize: wide
                   ? 45
-                  : state.emailExpanded
+                  : (state.emailExpanded || state.isVerifyingOtp)
                   ? 31
                   : 35,
               height: 1.08,
@@ -212,7 +224,9 @@ class _Introduction extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          state.isSignUp
+          state.isVerifyingOtp
+              ? 'Check your inbox for your 6-digit code to complete sign up.'
+              : state.isSignUp
               ? 'Links, ideas, little discoveries.\nA place to keep them close.'
               : 'All those things you meant to come back to.\nRight where you left them.',
           style: TextStyle(
@@ -248,133 +262,166 @@ class _Introduction extends StatelessWidget {
 class _AuthActions extends StatelessWidget {
   const _AuthActions({required this.state});
   final AuthState state;
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      GoogleAuthButton(
-        key: const ValueKey('auth-google'),
-        onPressed: state.busy
-            ? null
-            : () {
-                FocusScope.of(context).unfocus();
-                context.read<AuthBloc>().add(const AuthGoogleRequested());
-              },
-        loading: state.activity == AuthActivity.google,
-      ),
-      AnimatedSize(
-        duration: YankMotion.duration(context, YankMotion.panel),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: state.emailExpanded
-            ? Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 21),
+  Widget build(BuildContext context) {
+    if (state.isVerifyingOtp) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AuthOtpForm(state: state),
+          if (state.message != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  state.message!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 20),
+          Text(
+            'Demo mode · enter any 6 digits to verify',
+            textAlign: TextAlign.center,
+            style:
+                Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GoogleAuthButton(
+          key: const ValueKey('auth-google'),
+          onPressed: state.busy
+              ? null
+              : () {
+                  FocusScope.of(context).unfocus();
+                  context.read<AuthBloc>().add(const AuthGoogleRequested());
+                },
+          loading: state.activity == AuthActivity.google,
+        ),
+        AnimatedSize(
+          duration: YankMotion.duration(context, YankMotion.panel),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: state.emailExpanded
+              ? Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 21),
+                      child: Row(
+                        children: [
+                          Expanded(child: Divider(color: context.colors.line)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 13),
+                            child: Text(
+                              'or use email',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          Expanded(child: Divider(color: context.colors.line)),
+                        ],
+                      ),
+                    ),
+                    AuthEmailForm(state: state),
+                  ],
+                )
+              : Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: TextButton(
+                    key: const ValueKey('auth-email-reveal'),
+                    onPressed: state.busy
+                        ? null
+                        : () => context.read<AuthBloc>().add(
+                            const AuthEmailRevealed(),
+                          ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.colors.muted,
+                      minimumSize: const Size(48, 46),
+                    ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(child: Divider(color: context.colors.line)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 13),
+                        const Icon(LucideIcons.mail, size: 16),
+                        const SizedBox(width: 9),
+                        const Flexible(
                           child: Text(
-                            'or use email',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            'Continue with email',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13),
                           ),
                         ),
-                        Expanded(child: Divider(color: context.colors.line)),
                       ],
                     ),
                   ),
-                  AuthEmailForm(state: state),
-                ],
-              )
-            : Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: TextButton(
-                  key: const ValueKey('auth-email-reveal'),
-                  onPressed: state.busy
-                      ? null
-                      : () => context.read<AuthBloc>().add(
-                          const AuthEmailRevealed(),
-                        ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.colors.muted,
-                    minimumSize: const Size(48, 46),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(LucideIcons.mail, size: 16),
-                      const SizedBox(width: 9),
-                      const Flexible(
-                        child: Text(
-                          'Continue with email',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-      ),
-      if (state.message != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: Semantics(
-            liveRegion: true,
-            child: Text(
-              state.message!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-                fontSize: 12,
+        ),
+        if (state.message != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                state.message!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
               ),
             ),
           ),
-        ),
-      Padding(
-        padding: const EdgeInsets.only(top: 17),
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.center,
-          children: [
-            Text(
-              state.isSignUp
-                  ? 'Already have a space here?'
-                  : 'New around here?',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            TextButton(
-              key: const ValueKey('auth-mode-switch'),
-              onPressed: state.busy
-                  ? null
-                  : () {
-                      FocusScope.of(context).unfocus();
-                      context.read<AuthBloc>().add(
-                        AuthModeChanged(
-                          state.isSignUp ? AuthMode.logIn : AuthMode.signUp,
-                        ),
-                      );
-                    },
-              child: Text(
-                state.isSignUp ? 'Log in' : 'Sign up',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        Padding(
+          padding: const EdgeInsets.only(top: 17),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.center,
+            children: [
+              Text(
+                state.isSignUp
+                    ? 'Already have a space here?'
+                    : 'New around here?',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              TextButton(
+                key: const ValueKey('auth-mode-switch'),
+                onPressed: state.busy
+                    ? null
+                    : () {
+                        FocusScope.of(context).unfocus();
+                        context.read<AuthBloc>().add(
+                          AuthModeChanged(
+                            state.isSignUp ? AuthMode.logIn : AuthMode.signUp,
+                          ),
+                        );
+                      },
+                child: Text(
+                  state.isSignUp ? 'Log in' : 'Sign up',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        'Demo mode · sign-in stays on this device',
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
-      ),
-    ],
-  );
+        const SizedBox(height: 10),
+        Text(
+          'Demo mode · sign-in stays on this device',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+        ),
+      ],
+    );
+  }
 }
 
 void _showDemoInfo(BuildContext context) => showDialog<void>(

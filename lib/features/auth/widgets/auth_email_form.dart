@@ -15,14 +15,30 @@ class AuthEmailForm extends StatefulWidget {
 class _AuthEmailFormState extends State<AuthEmailForm> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   bool _obscure = true;
+  bool _obscureConfirm = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.state.pendingEmail != null) {
+      _email.text = widget.state.pendingEmail!;
+    }
+    if (widget.state.pendingPassword != null) {
+      _password.text = widget.state.pendingPassword!;
+      _confirmPassword.text = widget.state.pendingPassword!;
+    }
+  }
 
   @override
   void didUpdateWidget(covariant AuthEmailForm oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state.mode != widget.state.mode) {
       _password.clear();
+      _confirmPassword.clear();
       _obscure = true;
+      _obscureConfirm = true;
     }
   }
 
@@ -31,6 +47,8 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
     _email.dispose();
     _password.clear();
     _password.dispose();
+    _confirmPassword.clear();
+    _confirmPassword.dispose();
     super.dispose();
   }
 
@@ -40,13 +58,18 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
     }
     FocusScope.of(context).unfocus();
     context.read<AuthBloc>().add(
-      AuthEmailSubmitted(_email.text, _password.text),
+      AuthEmailSubmitted(
+        _email.text,
+        _password.text,
+        confirmPassword: widget.state.isSignUp ? _confirmPassword.text : null,
+      ),
     );
   }
 
   void _changed(String _) {
     if (widget.state.emailError != null ||
         widget.state.passwordError != null ||
+        widget.state.confirmPasswordError != null ||
         widget.state.message != null) {
       context.read<AuthBloc>().add(const AuthErrorsCleared());
     }
@@ -93,10 +116,11 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
             obscureText: _obscure,
             autocorrect: false,
             enableSuggestions: false,
-            textInputAction: TextInputAction.done,
+            textInputAction:
+                state.isSignUp ? TextInputAction.next : TextInputAction.done,
             maxLength: 128,
             onChanged: _changed,
-            onSubmitted: (_) => _submit(),
+            onSubmitted: (_) => state.isSignUp ? null : _submit(),
             decoration: InputDecoration(
               labelText: 'Password',
               hintText: 'At least 8 characters',
@@ -122,6 +146,47 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
               ),
             ),
           ),
+          if (state.isSignUp) ...[
+            const SizedBox(height: 16),
+            TextField(
+              key: const ValueKey('auth-confirm-password'),
+              controller: _confirmPassword,
+              enabled: !state.busy,
+              obscureText: _obscureConfirm,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.done,
+              maxLength: 128,
+              onChanged: _changed,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                labelText: 'Confirm password',
+                hintText: 'Re-enter your password',
+                counterText: '',
+                errorText: state.confirmPasswordError,
+                errorMaxLines: 2,
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                fillColor: context.colors.surface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.colors.line),
+                ),
+                suffixIcon: IconButton(
+                  tooltip: _obscureConfirm ? 'Show password' : 'Hide password',
+                  onPressed: state.busy
+                      ? null
+                      : () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                  icon: Icon(
+                    _obscureConfirm ? LucideIcons.eye : LucideIcons.eyeOff,
+                    size: 18,
+                    color: context.colors.muted,
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (!state.isSignUp)
             Align(
               alignment: Alignment.centerRight,
@@ -167,7 +232,9 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
                 Flexible(
                   child: Text(
                     state.activity == AuthActivity.email
-                        ? 'Opening your space...'
+                        ? (state.isSignUp
+                            ? 'Sending verification code...'
+                            : 'Opening your space...')
                         : state.isSignUp
                         ? 'Create account'
                         : 'Log in',

@@ -69,6 +69,96 @@ void main() {
       await tester.pumpAndSettle();
     });
   }
+
+  testWidgets('Signup confirm password validation and OTP verification flow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemoryMetadataStore();
+    final library = await DemoLibraryRepository.open(store);
+    final auth = await DemoAuthRepository.open(store);
+    await tester.pumpWidget(
+      YankApp(
+        library: library,
+        authRepository: auth,
+        settingsRepository: SettingsRepository(store),
+        initialAppearance: const AppearanceSettings(),
+        audioFactory: _SilentAudio.new,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Reveal email form.
+    await tester.tap(find.byKey(const ValueKey('auth-email-reveal')));
+    await tester.pumpAndSettle();
+
+    // Confirm password field must be present in sign-up mode.
+    expect(find.byKey(const ValueKey('auth-confirm-password')), findsOneWidget);
+
+    // Enter email and non-matching passwords.
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-email')),
+      'alice@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-password')),
+      'securepass123',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-confirm-password')),
+      'wrongpassword',
+    );
+
+    final submit = find.byKey(const ValueKey('auth-email-submit'));
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    // Expect validation error.
+    expect(find.text('Passwords do not match.'), findsOneWidget);
+
+    // Correct confirm password to match.
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-confirm-password')),
+      'securepass123',
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    // Transition to OTP verification screen.
+    expect(find.text('Verification code'), findsOneWidget);
+    expect(find.byKey(const ValueKey('auth-otp-input')), findsOneWidget);
+
+    // Test back button to edit details.
+    final back = find.byKey(const ValueKey('auth-otp-back'));
+    await tester.ensureVisible(back);
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('auth-confirm-password')), findsOneWidget);
+
+    // Resubmit to return to OTP.
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('auth-otp-input')), findsOneWidget);
+
+    // Enter 6-digit OTP code which auto-submits upon completion.
+    await tester.enterText(
+      find.byKey(const ValueKey('auth-otp-input')),
+      '123456',
+    );
+    await tester.pumpAndSettle();
+
+    // Account created and library space opened.
+    expect(auth.currentUser?.email, 'alice@example.com');
+    expect(find.text('Flutter animation guide'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
 }
 
 class _SilentAudio implements AudioRepository {

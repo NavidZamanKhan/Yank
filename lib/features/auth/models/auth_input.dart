@@ -26,4 +26,25 @@ abstract final class AuthInput {
     }
     return null;
   }
+
+  static String? confirmPasswordError(String password, String confirmPassword) {
+    if (confirmPassword.isEmpty) {
+      return 'Confirm your password.';
+    }
+    if (password != confirmPassword) {
+      return 'Passwords do not match.';
+    }
+    return null;
+  }
+
+  static String? otpError(String otp) {
+    final clean = otp.trim();
+    if (clean.isEmpty) {
+      return 'Enter the 6-digit code.';
+    }
+    if (clean.length != 6 || !RegExp(r'^\d{6}$').hasMatch(clean)) {
+      return 'Enter a valid 6-digit code.';
+    }
+    return null;
+  }
 }

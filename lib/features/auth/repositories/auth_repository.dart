@@ -6,5 +6,11 @@ abstract interface class AuthRepository {
   Future<AuthUser> continueWithGoogle();
   Future<AuthUser> signInWithEmail(String email, String password);
   Future<AuthUser> createAccount(String email, String password);
+  Future<void> sendSignUpOtp(String email);
+  Future<AuthUser> verifySignUpOtp({
+    required String email,
+    required String password,
+    required String otp,
+  });
   Future<void> signOut();
 }
