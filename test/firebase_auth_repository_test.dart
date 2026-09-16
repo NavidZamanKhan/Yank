@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:yank/features/auth/models/auth_failure.dart';
 import 'package:yank/features/auth/repositories/firebase_auth_repository.dart';
 
@@ -64,18 +65,25 @@ void main() {
       );
     });
 
-    test('continueWithGoogle provides clear message to use email', () async {
-      final repository = FirebaseAuthRepository();
+    test('continueWithGoogle handles user cancellation', () async {
+      final repository = FirebaseAuthRepository(
+        googleSignIn: _FakeGoogleSignIn(),
+      );
       expect(
         () => repository.continueWithGoogle(),
         throwsA(
           isA<AuthFailure>().having(
             (e) => e.message,
             'message',
-            contains('Please continue with email'),
+            'Google sign-in was cancelled.',
           ),
         ),
       );
     });
   });
+}
+
+class _FakeGoogleSignIn extends Fake implements GoogleSignIn {
+  @override
+  Future<GoogleSignInAccount?> signIn() async => null;
 }

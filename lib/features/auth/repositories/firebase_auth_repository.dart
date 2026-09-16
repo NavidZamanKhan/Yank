@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/auth_failure.dart';
 import '../models/auth_input.dart';
@@ -6,10 +7,17 @@ import '../models/auth_user.dart';
 import 'auth_repository.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
-  FirebaseAuthRepository({fb.FirebaseAuth? auth}) : _authOverride = auth;
+  FirebaseAuthRepository({
+    fb.FirebaseAuth? auth,
+    GoogleSignIn? googleSignIn,
+  })  : _authOverride = auth,
+        _googleSignInOverride = googleSignIn;
 
   final fb.FirebaseAuth? _authOverride;
+  final GoogleSignIn? _googleSignInOverride;
+
   fb.FirebaseAuth get _auth => _authOverride ?? fb.FirebaseAuth.instance;
+  GoogleSignIn get _googleSignIn => _googleSignInOverride ?? GoogleSignIn();
 
   @override
   AuthUser? get currentUser {
@@ -29,10 +37,32 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> continueWithGoogle() async {
-    // Google Sign-In SDK configuration for iOS/macOS/Android is planned for the next step.
-    throw const AuthFailure(
-      'Google sign-in is being configured. Please continue with email for now.',
-    );
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw const AuthFailure('Google sign-in was cancelled.');
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = fb.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user == null || user.email == null) {
+        throw const AuthFailure('Failed to retrieve user from Google sign-in.');
+      }
+      return AuthUser(
+        email: user.email!,
+        provider: AuthProvider.google,
+        uid: user.uid,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure('Google sign-in error: $e');
+    }
   }
 
   @override
@@ -116,9 +146,14 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() async {
     try {
-      await _auth.signOut();
+      await Future.wait([
+        _auth.signOut(),
+        _googleSignIn.signOut(),
+      ]);
     } on fb.FirebaseAuthException catch (e) {
       throw _mapFirebaseAuthException(e);
+    } catch (_) {
+      // Ignore Google sign-out failures if already signed out
     }
   }
 

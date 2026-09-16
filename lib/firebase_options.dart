@@ -60,22 +60,22 @@ class DefaultFirebaseOptions {
     projectId: 'yank-b3078',
     storageBucket: 'yank-b3078.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBbW3w158Dod6_ORXLvxwhrlENsHis1Nvc',
     appId: '1:106375247397:ios:75943986d861a99c64f1cc',
     messagingSenderId: '106375247397',
     projectId: 'yank-b3078',
     storageBucket: 'yank-b3078.firebasestorage.app',
+    iosClientId: '106375247397-ebkdgl12fclqb32bgamd2nnjqb063t29.apps.googleusercontent.com',
     iosBundleId: 'com.example.yank',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBbW3w158Dod6_ORXLvxwhrlENsHis1Nvc',
     appId: '1:106375247397:ios:75943986d861a99c64f1cc',
     messagingSenderId: '106375247397',
     projectId: 'yank-b3078',
     storageBucket: 'yank-b3078.firebasestorage.app',
+    iosClientId: '106375247397-ebkdgl12fclqb32bgamd2nnjqb063t29.apps.googleusercontent.com',
     iosBundleId: 'com.example.yank',
   );
 }

@@ -12,7 +12,12 @@
           "package_name": "com.example.yank"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "106375247397-5ei78m1ca6menmjjlf0sh2i2hpkepq5d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAIqd02kTVhcVyNaUMW3V7dUQxxCA5c9dI"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "106375247397-5ei78m1ca6menmjjlf0sh2i2hpkepq5d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "106375247397-ebkdgl12fclqb32bgamd2nnjqb063t29.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.yank"
+              }
+            }
+          ]
         }
       }
     }
