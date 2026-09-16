@@ -101,19 +101,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(state.copyWith(activity: AuthActivity.email, clearErrors: true));
 
           if (state.isSignUp) {
-            await repository.sendSignUpOtp(email);
-            if (!emit.isDone) {
-              emit(
-                state.copyWith(
-                  activity: AuthActivity.idle,
-                  isVerifyingOtp: true,
-                  pendingEmail: email,
-                  pendingPassword: password,
-                  otpCooldownRemaining: 30,
-                  clearErrors: true,
-                ),
-              );
-              _startCooldown(30);
+            if (repository.requiresOtpVerification) {
+              await repository.sendSignUpOtp(email);
+              if (!emit.isDone) {
+                emit(
+                  state.copyWith(
+                    activity: AuthActivity.idle,
+                    isVerifyingOtp: true,
+                    pendingEmail: email,
+                    pendingPassword: password,
+                    otpCooldownRemaining: 30,
+                    clearErrors: true,
+                  ),
+                );
+                _startCooldown(30);
+              }
+            } else {
+              final user = await repository.createAccount(email, password);
+              if (!emit.isDone) {
+                emit(AuthState(user: user, mode: state.mode));
+              }
             }
           } else {
             final user = await repository.signInWithEmail(email, password);
@@ -156,6 +163,50 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             otp: otp,
           );
           _cancelTimer();
+          if (!emit.isDone) {
+            emit(AuthState(user: user, mode: state.mode));
+          }
+        case AuthPasswordResetRequested(:final email):
+          final emailError = AuthInput.emailError(email);
+          if (emailError != null) {
+            emit(state.copyWith(emailError: emailError));
+            return;
+          }
+          emit(state.copyWith(activity: AuthActivity.email, clearErrors: true));
+          await repository.sendPasswordReset(email);
+          if (!emit.isDone) {
+            emit(
+              state.copyWith(
+                activity: AuthActivity.idle,
+                message: 'Password reset link sent to $email. Check your inbox.',
+                noticeSerial: state.noticeSerial + 1,
+              ),
+            );
+          }
+        case AuthEmailLinkRequested(:final email):
+          final emailError = AuthInput.emailError(email);
+          if (emailError != null) {
+            emit(state.copyWith(emailError: emailError));
+            return;
+          }
+          emit(state.copyWith(activity: AuthActivity.email, clearErrors: true));
+          await repository.sendSignInLinkToEmail(email);
+          if (!emit.isDone) {
+            emit(
+              state.copyWith(
+                activity: AuthActivity.idle,
+                message:
+                    'Sign-in link sent to $email. Open the link in your email to sign in.',
+                noticeSerial: state.noticeSerial + 1,
+              ),
+            );
+          }
+        case AuthEmailLinkVerified(:final email, :final emailLink):
+          emit(state.copyWith(activity: AuthActivity.email, clearErrors: true));
+          final user = await repository.signInWithEmailLink(
+            email: email,
+            emailLink: emailLink,
+          );
           if (!emit.isDone) {
             emit(AuthState(user: user, mode: state.mode));
           }

@@ -25,6 +25,12 @@ class DemoAuthRepository implements AuthRepository {
   }
 
   @override
+  bool get isDemo => true;
+
+  @override
+  bool get requiresOtpVerification => true;
+
+  @override
   AuthUser? get currentUser => _currentUser;
 
   Future<void> _commit(AuthUser? user) {
@@ -89,6 +95,29 @@ class DemoAuthRepository implements AuthRepository {
     }
     return _emailSession(email, password);
   }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    if (AuthInput.emailError(email) != null) {
+      throw const FormatException('Invalid email address for password reset.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+
+  @override
+  Future<void> sendSignInLinkToEmail(String email) async {
+    if (AuthInput.emailError(email) != null) {
+      throw const FormatException('Invalid email address.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+
+  @override
+  Future<AuthUser> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  }) =>
+      _emailSession(email, 'samplepassword123');
 
   @override
   Future<void> signOut() => _commit(null);

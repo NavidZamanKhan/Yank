@@ -286,7 +286,9 @@ class _AuthActions extends StatelessWidget {
             ),
           const SizedBox(height: 20),
           Text(
-            'Demo mode · enter any 6 digits to verify',
+            context.read<AuthBloc>().repository.isDemo
+                ? 'Demo mode · enter any 6 digits to verify'
+                : 'Enter the 6-digit code sent to your email',
             textAlign: TextAlign.center,
             style:
                 Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
@@ -415,7 +417,9 @@ class _AuthActions extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Demo mode · sign-in stays on this device',
+          context.read<AuthBloc>().repository.isDemo
+              ? 'Demo mode · sign-in stays on this device'
+              : 'Protected by Firebase Authentication',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
         ),
@@ -424,18 +428,25 @@ class _AuthActions extends StatelessWidget {
   }
 }
 
-void _showDemoInfo(BuildContext context) => showDialog<void>(
-  context: context,
-  builder: (context) => AlertDialog(
-    title: const Text('A little look inside Yank.'),
-    content: const Text(
-      'Google opens a sample session. Email signup and login accept any valid email and a sample password of 8 or more characters. Passwords are never saved.\n\nThis is a local interface prototype. No Google account is connected and no email is sent.',
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Got it'),
+void _showDemoInfo(BuildContext context) {
+  final isDemo = context.read<AuthBloc>().repository.isDemo;
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        isDemo ? 'A little look inside Yank.' : 'Firebase Authentication',
       ),
-    ],
-  ),
-);
+      content: Text(
+        isDemo
+            ? 'Google opens a sample session. Email signup and login accept any valid email and a sample password of 8 or more characters. Passwords are never saved.\n\nThis is a local interface prototype. No Google account is connected and no email is sent.'
+            : 'Authentication is securely managed by Firebase Authentication with Google Sign-In and Email Authentication. User sessions and credentials are encrypted and managed by Google Identity services.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Got it'),
+        ),
+      ],
+    ),
+  );
+}

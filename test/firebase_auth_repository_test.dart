@@ -65,6 +65,54 @@ void main() {
       );
     });
 
+    test('sendPasswordReset rejects invalid email before network call', () async {
+      final repository = FirebaseAuthRepository();
+      expect(
+        () => repository.sendPasswordReset('bad-email'),
+        throwsA(
+          isA<AuthFailure>().having(
+            (e) => e.message,
+            'message',
+            'That email address does not look quite right.',
+          ),
+        ),
+      );
+    });
+
+    test('sendSignInLinkToEmail rejects invalid email before network call', () async {
+      final repository = FirebaseAuthRepository();
+      expect(
+        () => repository.sendSignInLinkToEmail('bad-email'),
+        throwsA(
+          isA<AuthFailure>().having(
+            (e) => e.message,
+            'message',
+            'That email address does not look quite right.',
+          ),
+        ),
+      );
+    });
+
+    test('sendSignUpOtp rejects invalid email before dispatch', () async {
+      final repository = FirebaseAuthRepository();
+      expect(
+        () => repository.sendSignUpOtp('bad-email'),
+        throwsA(
+          isA<AuthFailure>().having(
+            (e) => e.message,
+            'message',
+            'That email address does not look quite right.',
+          ),
+        ),
+      );
+    });
+
+    test('FirebaseAuthRepository flags indicate live Firebase authentication', () {
+      final repository = FirebaseAuthRepository();
+      expect(repository.isDemo, isFalse);
+      expect(repository.requiresOtpVerification, isFalse);
+    });
+
     test('continueWithGoogle handles user cancellation', () async {
       final repository = FirebaseAuthRepository(
         googleSignIn: _FakeGoogleSignIn(),

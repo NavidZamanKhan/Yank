@@ -55,6 +55,25 @@ final class AuthOtpCooldownTicked extends AuthEvent {
   final int secondsRemaining;
 }
 
+final class AuthPasswordResetRequested extends AuthEvent {
+  const AuthPasswordResetRequested(this.email);
+  final String email;
+}
+
+final class AuthEmailLinkRequested extends AuthEvent {
+  const AuthEmailLinkRequested(this.email);
+  final String email;
+}
+
+final class AuthEmailLinkVerified extends AuthEvent {
+  const AuthEmailLinkVerified({
+    required this.email,
+    required this.emailLink,
+  });
+  final String email;
+  final String emailLink;
+}
+
 final class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }

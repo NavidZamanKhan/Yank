@@ -39,9 +39,11 @@ Future<void> _start({bool reset = false}) async {
     final library = await DemoLibraryRepository.open(store);
     AuthRepository auth;
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
       auth = FirebaseAuthRepository();
     } catch (e) {
       debugPrint('Firebase init fallback to demo auth: $e');

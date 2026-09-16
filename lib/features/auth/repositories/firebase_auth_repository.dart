@@ -20,6 +20,12 @@ class FirebaseAuthRepository implements AuthRepository {
   GoogleSignIn get _googleSignIn => _googleSignInOverride ?? GoogleSignIn();
 
   @override
+  bool get isDemo => false;
+
+  @override
+  bool get requiresOtpVerification => false;
+
+  @override
   AuthUser? get currentUser {
     final user = _auth.currentUser;
     if (user == null || user.email == null) {
@@ -109,6 +115,73 @@ class FirebaseAuthRepository implements AuthRepository {
       if (user == null || user.email == null) {
         throw const AuthFailure('Failed to create user session.');
       }
+      try {
+        await user.sendEmailVerification();
+      } catch (_) {
+        // Non-fatal if email verification dispatch fails or is delayed.
+      }
+      return AuthUser(
+        email: user.email!,
+        provider: AuthProvider.email,
+        uid: user.uid,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    final emailError = AuthInput.emailError(email);
+    if (emailError != null) {
+      throw AuthFailure(emailError);
+    }
+    try {
+      await _auth.sendPasswordResetEmail(
+        email: AuthInput.normalizeEmail(email),
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  @override
+  Future<void> sendSignInLinkToEmail(String email) async {
+    final emailError = AuthInput.emailError(email);
+    if (emailError != null) {
+      throw AuthFailure(emailError);
+    }
+    try {
+      final actionCodeSettings = fb.ActionCodeSettings(
+        url: 'https://yank-b3078.firebaseapp.com',
+        handleCodeInApp: true,
+        iOSBundleId: 'com.example.yank',
+        androidPackageName: 'com.example.yank',
+        androidInstallApp: true,
+      );
+      await _auth.sendSignInLinkToEmail(
+        email: AuthInput.normalizeEmail(email),
+        actionCodeSettings: actionCodeSettings,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  @override
+  Future<AuthUser> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  }) async {
+    try {
+      final credential = await _auth.signInWithEmailLink(
+        email: AuthInput.normalizeEmail(email),
+        emailLink: emailLink,
+      );
+      final user = credential.user;
+      if (user == null || user.email == null) {
+        throw const AuthFailure('Failed to complete email link sign-in.');
+      }
       return AuthUser(
         email: user.email!,
         provider: AuthProvider.email,
@@ -191,6 +264,14 @@ class FirebaseAuthRepository implements AuthRepository {
       case 'operation-not-allowed':
         return const AuthFailure(
           'Email/password sign-in is not enabled in the Firebase Console.',
+        );
+      case 'expired-action-code':
+        return const AuthFailure(
+          'The link has expired. Please request a new one.',
+        );
+      case 'invalid-action-code':
+        return const AuthFailure(
+          'The link is invalid or has already been used.',
         );
       default:
         return AuthFailure(e.message ?? 'Authentication failed.');

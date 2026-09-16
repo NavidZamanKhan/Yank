@@ -193,21 +193,7 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
               child: TextButton(
                 onPressed: state.busy
                     ? null
-                    : () => showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Trying the login flow?'),
-                          content: const Text(
-                            'This is a local demo. Any sample password with 8 or more characters works. No password is stored and no reset email is sent.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Got it'),
-                            ),
-                          ],
-                        ),
-                      ),
+                    : () => _showForgotPasswordDialog(context),
                 child: const Text(
                   'Forgot password?',
                   style: TextStyle(fontSize: 12),
@@ -247,6 +233,61 @@ class _AuthEmailFormState extends State<AuthEmailForm> {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    final emailController = TextEditingController(text: _email.text);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your email address to receive a password reset link.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              key: const ValueKey('auth-forgot-password-email'),
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.email],
+              decoration: InputDecoration(
+                labelText: 'Email address',
+                hintText: 'you@example.com',
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                fillColor: context.colors.surface,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.colors.line),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('auth-forgot-password-submit'),
+            onPressed: () {
+              final email = emailController.text.trim();
+              Navigator.pop(dialogContext);
+              if (email.isNotEmpty) {
+                context.read<AuthBloc>().add(AuthPasswordResetRequested(email));
+              }
+            },
+            child: const Text('Send reset link'),
           ),
         ],
       ),
