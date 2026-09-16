@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app/yank_app.dart';
 import 'core/theme/yank_theme.dart';
+import 'features/auth/repositories/demo_auth_repository.dart';
 import 'features/library/repositories/demo_fixtures.dart';
 import 'features/library/repositories/demo_library_repository.dart';
 import 'features/library/repositories/preferences_metadata_store.dart';
@@ -18,6 +19,7 @@ Future<void> _start({bool reset = false}) async {
   final store = PreferencesMetadataStore();
   try {
     if (reset) {
+      await store.write(DemoAuthRepository.storageKey, 'null');
       await store.write(
         DemoLibraryRepository.storageKey,
         jsonEncode(DemoFixtures.build().map((item) => item.toJson()).toList()),
@@ -30,8 +32,10 @@ Future<void> _start({bool reset = false}) async {
     final settingsRepository = SettingsRepository(store);
     final appearance = await settingsRepository.load();
     final library = await DemoLibraryRepository.open(store);
+    final auth = await DemoAuthRepository.open(store);
     runApp(
       YankApp(
+        authRepository: auth,
         library: library,
         settingsRepository: settingsRepository,
         initialAppearance: appearance,

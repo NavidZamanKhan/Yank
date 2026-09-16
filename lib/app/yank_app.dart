@@ -4,22 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/theme/yank_theme.dart';
-import '../features/audio/bloc/audio_bloc.dart';
 import '../features/audio/repositories/audio_repository.dart';
-import '../features/library/bloc/library_bloc.dart';
+import '../features/auth/bloc/auth_bloc.dart';
+import '../features/auth/repositories/auth_repository.dart';
+import '../features/auth/views/auth_gate.dart';
 import '../features/library/repositories/library_repository.dart';
-import '../features/library/views/library_page.dart';
 import '../features/settings/bloc/settings_bloc.dart';
 
 class YankApp extends StatelessWidget {
   const YankApp({
     super.key,
     required this.library,
+    required this.authRepository,
     required this.settingsRepository,
     required this.initialAppearance,
     this.audioFactory,
   });
   final LibraryRepository library;
+  final AuthRepository authRepository;
   final SettingsRepository settingsRepository;
   final AppearanceSettings initialAppearance;
   final AudioRepository Function()? audioFactory;
@@ -29,13 +31,9 @@ class YankApp extends StatelessWidget {
     dispose: (repository) => unawaited(repository.close()),
     child: MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => LibraryBloc(library)),
+        BlocProvider(create: (_) => AuthBloc(authRepository)),
         BlocProvider(
           create: (_) => SettingsBloc(settingsRepository, initialAppearance),
-        ),
-        BlocProvider(
-          create: (_) =>
-              AudioBloc(audioFactory?.call() ?? AssetAudioRepository()),
         ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
@@ -57,7 +55,7 @@ class YankApp extends StatelessWidget {
             ),
             child: child!,
           ),
-          home: const LibraryPage(),
+          home: AuthGate(audioFactory: audioFactory),
         ),
       ),
     ),

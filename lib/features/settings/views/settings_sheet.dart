@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/yank_theme.dart';
 import '../../../core/widgets/yank_controls.dart';
 import '../../audio/bloc/audio_bloc.dart';
+import '../../auth/widgets/logout_tile.dart';
 import '../../library/bloc/library_bloc.dart';
 import '../../library/models/yank_item.dart';
 import '../bloc/settings_bloc.dart';
@@ -179,6 +180,8 @@ class SettingsSheet extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 22),
+                  const LogoutTile(),
+                  const SizedBox(height: 14),
                   Text(
                     'Yank / Interface prototype',
                     style: Theme.of(context).textTheme.bodySmall,

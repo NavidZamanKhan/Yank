@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yank/app/yank_app.dart';
 import 'package:yank/features/audio/repositories/audio_repository.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
+import 'package:yank/features/auth/repositories/demo_auth_repository.dart';
 import 'package:yank/features/library/repositories/demo_library_repository.dart';
 import 'package:yank/features/library/repositories/metadata_store.dart';
 import 'package:yank/features/settings/repositories/settings_repository.dart';
@@ -16,10 +19,21 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final store = MemoryMetadataStore();
+      await store.write(
+        DemoAuthRepository.storageKey,
+        jsonEncode(
+          const AuthUser(
+            email: 'test@yank.demo',
+            provider: AuthProvider.google,
+          ).toJson(),
+        ),
+      );
       final repository = await DemoLibraryRepository.open(store);
+      final auth = await DemoAuthRepository.open(store);
       await tester.pumpWidget(
         YankApp(
           library: repository,
+          authRepository: auth,
           settingsRepository: SettingsRepository(store),
           initialAppearance: const AppearanceSettings(),
           audioFactory: _SilentAudio.new,
