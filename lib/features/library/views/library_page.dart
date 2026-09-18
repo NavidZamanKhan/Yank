@@ -191,9 +191,7 @@ class _LibraryPageState extends State<LibraryPage>
         },
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF121116)
-            : const Color(0xFFDDD9D2),
+        backgroundColor: Colors.black,
         body: AnimatedBuilder(
           animation: _sheetAnimation,
           builder: (context, child) {
@@ -205,46 +203,51 @@ class _LibraryPageState extends State<LibraryPage>
                     _sheetAnimation.value.clamp(0.0, 1.0),
                   );
 
-            final scale = 1.0 - (0.03 * t);
-            final translateY = 12.0 * t;
-            final radius = 28.0 * t;
-            final dimAlpha = (0.05 * t * 255).round();
+            final scale = 1.0 - (0.075 * t);
+            final translateY = 50.0 * t;
+            final radius = 34.0 * t;
+            final dimAlpha = (0.22 * t * 255).round();
 
-            return Transform.translate(
-              offset: Offset(0, translateY),
-              child: Transform.scale(
-                scale: scale,
-                alignment: Alignment.topCenter,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.colors.canvas,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(radius),
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: t > 0.4
+                  ? SystemUiOverlayStyle.light
+                  : (Theme.of(context).brightness == Brightness.dark
+                      ? SystemUiOverlayStyle.light
+                      : SystemUiOverlayStyle.dark),
+              child: Transform.translate(
+                offset: Offset(0, translateY),
+                child: Transform.scale(
+                  scale: scale,
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.canvas,
+                      borderRadius: BorderRadius.circular(radius),
+                      boxShadow: t > 0
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.45 * t),
+                                blurRadius: 28 * t,
+                                offset: Offset(0, 8 * t),
+                              ),
+                            ]
+                          : null,
                     ),
-                    boxShadow: t > 0
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08 * t),
-                              blurRadius: 16 * t,
-                              offset: Offset(0, 4 * t),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      child!,
-                      if (dimAlpha > 0)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: ColoredBox(
-                              color: Colors.black.withAlpha(dimAlpha),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        child!,
+                        if (dimAlpha > 0)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: ColoredBox(
+                                color: Colors.black.withAlpha(dimAlpha),
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
