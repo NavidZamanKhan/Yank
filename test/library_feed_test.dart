@@ -4,6 +4,7 @@ import 'package:yank/core/theme/yank_theme.dart';
 import 'package:yank/features/library/bloc/library_state.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/widgets/library_feed.dart';
+import 'package:yank/features/library/widgets/library_header.dart';
 
 void main() {
   testWidgets(
@@ -289,5 +290,131 @@ void main() {
 
     expect(find.text('Beta Link'), findsOneWidget);
     expect(find.text('Alpha Note'), findsNothing);
+  });
+
+  testWidgets(
+      'LibraryFeed triggers onSearch callback when user swipes down at top of feed',
+      (tester) async {
+    var searchTriggered = false;
+    final items = [
+      YankItem(
+        id: 'item-1',
+        kind: ItemKind.text,
+        title: 'Alpha Note',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    ];
+    final state = LibraryState(
+      items: items,
+      section: LibrarySection.library,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isFalse);
+
+    // Swipe down on the feed
+    await tester.drag(find.byType(ListView), const Offset(0.0, 80.0));
+    await tester.pump();
+
+    expect(searchTriggered, isTrue);
+  });
+
+  testWidgets(
+      'LibraryFeed triggers onSearch callback when user swipes down on empty library',
+      (tester) async {
+    var searchTriggered = false;
+    final state = LibraryState(
+      items: const [],
+      section: LibrarySection.library,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isFalse);
+
+    // Swipe down on empty state SingleChildScrollView
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0.0, 80.0));
+    await tester.pump();
+
+    expect(searchTriggered, isTrue);
+  });
+
+  testWidgets(
+      'LibraryHeader highlights with glow and triggers onSearch when swiped down',
+      (tester) async {
+    var searchTriggered = false;
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryHeader(
+            state: const LibraryState(items: []),
+            controller: controller,
+            focusNode: focusNode,
+            wide: false,
+            onQuery: (_) {},
+            onKind: (_) {},
+            onSource: (_) {},
+            onSettings: () {},
+            onBack: () {},
+            onClearYank: () {},
+            onSearch: () {
+              searchTriggered = true;
+              focusNode.requestFocus();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(focusNode.hasFocus, isFalse);
+
+    // Swipe down across LibraryHeader
+    await tester.fling(find.byType(LibraryHeader), const Offset(0.0, 300.0), 1000.0);
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isTrue);
+    expect(focusNode.hasFocus, isTrue);
   });
 }

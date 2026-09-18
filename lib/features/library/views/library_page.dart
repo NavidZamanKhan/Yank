@@ -101,6 +101,13 @@ class _LibraryPageState extends State<LibraryPage>
       ..add(const KindChanged(null));
   }
 
+  void _triggerSearch() {
+    if (!_searchFocus.hasFocus) {
+      HapticFeedback.lightImpact();
+      _searchFocus.requestFocus();
+    }
+  }
+
   Future<void> _preview(YankItem item, bool widePreview) async {
     if (_sheetAnimation.isAnimating) {
       return;
@@ -325,6 +332,7 @@ class _LibraryPageState extends State<LibraryPage>
                             const SectionChanged(LibrarySection.library),
                           ),
                           onClearYank: _clearYank,
+                          onSearch: _triggerSearch,
                         ),
                         Expanded(
                           child: LibraryFeed(
@@ -337,6 +345,7 @@ class _LibraryPageState extends State<LibraryPage>
                             onBrowse: () => _bloc.add(
                               const SectionChanged(LibrarySection.library),
                             ),
+                            onSearch: _triggerSearch,
                           ),
                         ),
                         const MiniPlayer(),

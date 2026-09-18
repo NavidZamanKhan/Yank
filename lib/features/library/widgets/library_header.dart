@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion/yank_motion.dart';
 import '../../../core/theme/yank_theme.dart';
 import '../../../core/widgets/yank_controls.dart';
 import '../bloc/library_bloc.dart';
@@ -19,6 +20,7 @@ class LibraryHeader extends StatelessWidget {
     required this.onSettings,
     required this.onBack,
     required this.onClearYank,
+    this.onSearch,
   });
   final LibraryState state;
   final TextEditingController controller;
@@ -28,6 +30,7 @@ class LibraryHeader extends StatelessWidget {
   final ValueChanged<ItemKind?> onKind;
   final ValueChanged<String?> onSource;
   final VoidCallback onSettings, onBack, onClearYank;
+  final VoidCallback? onSearch;
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.fromLTRB(
@@ -36,74 +39,112 @@ class LibraryHeader extends StatelessWidget {
       wide ? 26 : 19,
       0,
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            if (state.section == LibrarySection.archive && !wide)
-              IconButton(
-                onPressed: onBack,
-                tooltip: 'Back to library',
-                icon: const Icon(LucideIcons.arrowLeft),
-              ),
-            if (!wide && state.section != LibrarySection.archive)
-              const YankWordmark()
-            else
-              Text(switch (state.section) {
-                LibrarySection.library => 'Library',
-                LibrarySection.yank => 'Kept close.',
-                LibrarySection.archive => 'Archive',
-              }, style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
-            if (state.section == LibrarySection.yank && state.yankCount > 0)
-              TextButton(
-                onPressed: onClearYank,
-                child: const Text('Clear', style: TextStyle(fontSize: 12)),
-              ),
-            if (!wide)
-              IconButton(
-                onPressed: onSettings,
-                tooltip: 'Settings',
-                icon: Icon(
-                  LucideIcons.settings2,
-                  color: context.colors.muted,
-                  size: 19,
+    child: GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragEnd: (details) {
+        if (details.primaryVelocity != null && details.primaryVelocity! > 160) {
+          onSearch?.call();
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (state.section == LibrarySection.archive && !wide)
+                IconButton(
+                  onPressed: onBack,
+                  tooltip: 'Back to library',
+                  icon: const Icon(LucideIcons.arrowLeft),
                 ),
-              ),
-          ],
-        ),
-        SizedBox(height: wide ? 23 : 11),
-        TextField(
-          controller: controller,
-          focusNode: focusNode,
-          onChanged: onQuery,
-          style: const TextStyle(fontSize: 14),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: 'Find anything',
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 12,
-              horizontal: 12,
-            ),
-            prefixIcon: Icon(
-              LucideIcons.search,
-              size: 17,
-              color: context.colors.muted,
-            ),
-            suffixIcon: state.query.isEmpty
-                ? null
-                : IconButton(
-                    onPressed: () {
-                      controller.clear();
-                      onQuery('');
-                    },
-                    tooltip: 'Clear search',
-                    icon: const Icon(LucideIcons.x, size: 16),
+              if (!wide && state.section != LibrarySection.archive)
+                const YankWordmark()
+              else
+                Text(switch (state.section) {
+                  LibrarySection.library => 'Library',
+                  LibrarySection.yank => 'Kept close.',
+                  LibrarySection.archive => 'Archive',
+                }, style: Theme.of(context).textTheme.titleLarge),
+              const Spacer(),
+              if (state.section == LibrarySection.yank && state.yankCount > 0)
+                TextButton(
+                  onPressed: onClearYank,
+                  child: const Text('Clear', style: TextStyle(fontSize: 12)),
+                ),
+              if (!wide)
+                IconButton(
+                  onPressed: onSettings,
+                  tooltip: 'Settings',
+                  icon: Icon(
+                    LucideIcons.settings2,
+                    color: context.colors.muted,
+                    size: 19,
                   ),
+                ),
+            ],
           ),
-        ),
-        const SizedBox(height: 9),
+          SizedBox(height: wide ? 23 : 11),
+          ListenableBuilder(
+            listenable: focusNode,
+            builder: (context, _) {
+              final isFocused = focusNode.hasFocus;
+              return AnimatedContainer(
+                duration: YankMotion.duration(
+                  context,
+                  const Duration(milliseconds: 200),
+                ),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: context.colors.iris.withValues(alpha: 0.12),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  onChanged: onQuery,
+                  style: const TextStyle(fontSize: 14),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: isFocused ? 'Type to search...' : 'Find anything',
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 12,
+                    ),
+                    prefixIcon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        LucideIcons.search,
+                        key: ValueKey(isFocused),
+                        size: 17,
+                        color: isFocused
+                            ? context.colors.iris
+                            : context.colors.muted,
+                      ),
+                    ),
+                    suffixIcon: state.query.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              controller.clear();
+                              onQuery('');
+                            },
+                            tooltip: 'Clear search',
+                            icon: const Icon(LucideIcons.x, size: 16),
+                          ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 9),
         Row(
           children:
               <ItemKind?>[
@@ -165,7 +206,8 @@ class LibraryHeader extends StatelessWidget {
               ],
             ),
           ),
-      ],
+        ],
+      ),
     ),
   );
 }

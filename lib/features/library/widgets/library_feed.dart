@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion/yank_motion.dart';
@@ -20,12 +21,14 @@ class LibraryFeed extends StatefulWidget {
     required this.onClear,
     required this.onCapture,
     required this.onBrowse,
+    this.onSearch,
   });
 
   final LibraryState state;
   final bool wide;
   final ValueChanged<YankItem> onOpen, onPreview;
   final VoidCallback onClear, onCapture, onBrowse;
+  final VoidCallback? onSearch;
 
   @override
   State<LibraryFeed> createState() => _LibraryFeedState();
@@ -35,6 +38,38 @@ class _LibraryFeedState extends State<LibraryFeed> {
   late LibrarySection _lastSection;
   ItemKind? _lastKind;
   bool _isForward = true;
+  bool _searchTriggered = false;
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (widget.onSearch == null) return false;
+
+    if (notification is ScrollUpdateNotification) {
+      if (notification.metrics.pixels < -28.0 ||
+          (notification.metrics.pixels <= 0 &&
+              notification.scrollDelta != null &&
+              notification.scrollDelta! < -20.0)) {
+        if (!_searchTriggered) {
+          _searchTriggered = true;
+          widget.onSearch!();
+        }
+      }
+    } else if (notification is OverscrollNotification) {
+      if (notification.overscroll < -16.0) {
+        if (!_searchTriggered) {
+          _searchTriggered = true;
+          widget.onSearch!();
+        }
+      }
+    } else if (notification is ScrollEndNotification) {
+      _searchTriggered = false;
+    } else if (notification is UserScrollNotification) {
+      if (notification.direction == ScrollDirection.idle &&
+          notification.metrics.pixels >= 0) {
+        _searchTriggered = false;
+      }
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -98,6 +133,9 @@ class _LibraryFeedState extends State<LibraryFeed> {
       }
       content = ListView.builder(
         key: PageStorageKey(filterKey),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: EdgeInsets.fromLTRB(
           widget.wide ? 24 : 15,
@@ -197,7 +235,10 @@ class _LibraryFeedState extends State<LibraryFeed> {
       },
       child: KeyedSubtree(
         key: currentKey,
-        child: content,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: content,
+        ),
       ),
     );
   }
@@ -235,6 +276,9 @@ class _EmptyLibrary extends StatelessWidget {
           };
     return Center(
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         padding: const EdgeInsets.all(30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
