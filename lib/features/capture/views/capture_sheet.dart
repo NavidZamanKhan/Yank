@@ -11,12 +11,16 @@ import '../../library/repositories/library_repository.dart';
 import '../../library/widgets/poster_artwork.dart';
 import '../bloc/capture_bloc.dart';
 
-Future<bool?> showCaptureSheet(BuildContext context) =>
+Future<bool?> showCaptureSheet(
+  BuildContext context, {
+  AnimationController? animationController,
+}) =>
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 620),
+      transitionAnimationController: animationController,
       builder: (context) => BlocProvider(
         create: (_) => CaptureBloc(context.read<LibraryRepository>()),
         child: const CaptureSheet(),

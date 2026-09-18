@@ -11,12 +11,17 @@ import '../../library/models/yank_item.dart';
 import '../../library/widgets/item_actions.dart';
 import '../../library/widgets/poster_artwork.dart';
 
-Future<void> showItemPreview(BuildContext context, String id) =>
+Future<void> showItemPreview(
+  BuildContext context,
+  String id, {
+  AnimationController? animationController,
+}) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 720),
+      transitionAnimationController: animationController,
       builder: (context) => SizedBox(
         height: MediaQuery.sizeOf(context).height * .86,
         child: ItemPreview(id: id),

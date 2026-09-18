@@ -10,12 +10,16 @@ import '../../library/bloc/library_bloc.dart';
 import '../../library/models/yank_item.dart';
 import '../bloc/settings_bloc.dart';
 
-Future<void> showSettingsSheet(BuildContext context) =>
+Future<void> showSettingsSheet(
+  BuildContext context, {
+  AnimationController? animationController,
+}) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 620),
+      transitionAnimationController: animationController,
       builder: (context) => const SettingsSheet(),
     );
 

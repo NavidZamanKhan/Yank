@@ -24,15 +24,23 @@ class LibraryPage extends StatefulWidget {
   State<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends State<LibraryPage> {
+class _LibraryPageState extends State<LibraryPage>
+    with SingleTickerProviderStateMixin {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   bool _captureOpen = false;
+  late final AnimationController _sheetAnimation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+    reverseDuration: const Duration(milliseconds: 280),
+  );
   LibraryBloc get _bloc => context.read<LibraryBloc>();
+
   @override
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
+    _sheetAnimation.dispose();
     super.dispose();
   }
 
@@ -42,8 +50,14 @@ class _LibraryPageState extends State<LibraryPage> {
     }
     _captureOpen = true;
     _searchFocus.unfocus();
-    final saved = await showCaptureSheet(context);
+    final saved = await showCaptureSheet(
+      context,
+      animationController: _sheetAnimation,
+    );
     _captureOpen = false;
+    if (mounted && _sheetAnimation.value != 0.0) {
+      _sheetAnimation.value = 0.0;
+    }
     if (!mounted || saved != true) {
       return;
     }
@@ -67,7 +81,24 @@ class _LibraryPageState extends State<LibraryPage> {
     if (widePreview) {
       _bloc.add(PreviewSelected(item.id));
     } else {
-      await showItemPreview(context, item.id);
+      await showItemPreview(
+        context,
+        item.id,
+        animationController: _sheetAnimation,
+      );
+      if (mounted && _sheetAnimation.value != 0.0) {
+        _sheetAnimation.value = 0.0;
+      }
+    }
+  }
+
+  Future<void> _showSettings() async {
+    await showSettingsSheet(
+      context,
+      animationController: _sheetAnimation,
+    );
+    if (mounted && _sheetAnimation.value != 0.0) {
+      _sheetAnimation.value = 0.0;
     }
   }
 
@@ -160,99 +191,152 @@ class _LibraryPageState extends State<LibraryPage> {
         },
       },
       child: Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 900;
-              final widePreview = constraints.maxWidth >= 1180;
-              return BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, state) {
-                  final selected = state.selectedId == null
-                      ? null
-                      : state.item(state.selectedId!);
-                  final content = Column(
-                    children: [
-                      LibraryHeader(
-                        state: state,
-                        controller: _search,
-                        focusNode: _searchFocus,
-                        wide: wide,
-                        onQuery: (query) => _bloc.add(QueryChanged(query)),
-                        onKind: (kind) => _bloc.add(KindChanged(kind)),
-                        onSource: (source) => _bloc.add(SourceChanged(source)),
-                        onSettings: () => showSettingsSheet(context),
-                        onBack: () => _bloc.add(
-                          const SectionChanged(LibrarySection.library),
-                        ),
-                        onClearYank: _clearYank,
-                      ),
-                      Expanded(
-                        child: LibraryFeed(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black
+            : const Color(0xFF1B1A20),
+        body: AnimatedBuilder(
+          animation: _sheetAnimation,
+          builder: (context, child) {
+            final reduced = MediaQuery.disableAnimationsOf(context);
+            final isWide = MediaQuery.sizeOf(context).width >= 900;
+            final t = (reduced || isWide)
+                ? 0.0
+                : Curves.easeOutCubic.transform(
+                    _sheetAnimation.value.clamp(0.0, 1.0),
+                  );
+
+            final scale = 1.0 - (0.045 * t);
+            final translateY = 14.0 * t;
+            final radius = 18.0 * t;
+            final dimAlpha = (0.12 * t * 255).round();
+
+            return Transform.translate(
+              offset: Offset(0, translateY),
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.topCenter,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(radius),
+                  ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.colors.canvas,
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        child!,
+                        if (dimAlpha > 0)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: ColoredBox(
+                                color: Colors.black.withAlpha(dimAlpha),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+          child: SafeArea(
+            bottom: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 900;
+                final widePreview = constraints.maxWidth >= 1180;
+                return BlocBuilder<LibraryBloc, LibraryState>(
+                  builder: (context, state) {
+                    final selected = state.selectedId == null
+                        ? null
+                        : state.item(state.selectedId!);
+                    final content = Column(
+                      children: [
+                        LibraryHeader(
                           state: state,
+                          controller: _search,
+                          focusNode: _searchFocus,
                           wide: wide,
-                          onOpen: (item) => _open(item, widePreview),
-                          onPreview: (item) => _preview(item, widePreview),
-                          onClear: _clear,
-                          onCapture: _capture,
-                          onBrowse: () => _bloc.add(
+                          onQuery: (query) => _bloc.add(QueryChanged(query)),
+                          onKind: (kind) => _bloc.add(KindChanged(kind)),
+                          onSource: (source) =>
+                              _bloc.add(SourceChanged(source)),
+                          onSettings: _showSettings,
+                          onBack: () => _bloc.add(
                             const SectionChanged(LibrarySection.library),
                           ),
+                          onClearYank: _clearYank,
                         ),
-                      ),
-                      const MiniPlayer(),
-                      if (!wide)
-                        LibraryBottomNavigation(
+                        Expanded(
+                          child: LibraryFeed(
+                            state: state,
+                            wide: wide,
+                            onOpen: (item) => _open(item, widePreview),
+                            onPreview: (item) => _preview(item, widePreview),
+                            onClear: _clear,
+                            onCapture: _capture,
+                            onBrowse: () => _bloc.add(
+                              const SectionChanged(LibrarySection.library),
+                            ),
+                          ),
+                        ),
+                        const MiniPlayer(),
+                        if (!wide)
+                          LibraryBottomNavigation(
+                            section: state.section,
+                            yankCount: state.yankCount,
+                            onSection: (section) =>
+                                _bloc.add(SectionChanged(section)),
+                            onCapture: _capture,
+                          ),
+                      ],
+                    );
+                    if (!wide) {
+                      return content;
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        LibrarySidebar(
                           section: state.section,
                           yankCount: state.yankCount,
                           onSection: (section) =>
                               _bloc.add(SectionChanged(section)),
                           onCapture: _capture,
+                          onSettings: _showSettings,
                         ),
-                    ],
-                  );
-                  if (!wide) {
-                    return content;
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      LibrarySidebar(
-                        section: state.section,
-                        yankCount: state.yankCount,
-                        onSection: (section) =>
-                            _bloc.add(SectionChanged(section)),
-                        onCapture: _capture,
-                        onSettings: () => showSettingsSheet(context),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 670),
-                            child: content,
-                          ),
-                        ),
-                      ),
-                      if (widePreview && selected != null)
-                        Container(
-                          width: 370,
-                          decoration: BoxDecoration(
-                            color: context.colors.canvas,
-                            border: Border(
-                              left: BorderSide(color: context.colors.line),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 670),
+                              child: content,
                             ),
                           ),
-                          child: ItemPreview(
-                            id: selected.id,
-                            onClose: () =>
-                                _bloc.add(const PreviewSelected(null)),
-                          ),
                         ),
-                    ],
-                  );
-                },
-              );
-            },
+                        if (widePreview && selected != null)
+                          Container(
+                            width: 370,
+                            decoration: BoxDecoration(
+                              color: context.colors.canvas,
+                              border: Border(
+                                left: BorderSide(color: context.colors.line),
+                              ),
+                            ),
+                            child: ItemPreview(
+                              id: selected.id,
+                              onClose: () =>
+                                  _bloc.add(const PreviewSelected(null)),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
       ),
