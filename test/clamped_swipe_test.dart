@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yank/core/theme/yank_theme.dart';
@@ -10,8 +11,19 @@ import 'package:yank/features/library/repositories/metadata_store.dart';
 import 'package:yank/features/library/widgets/yank_item_card.dart';
 
 void main() {
-  testWidgets('swiping right clamps travel to soft border and triggers yank',
+  testWidgets('swiping right clamps travel to soft border and triggers yank with light haptic',
       (tester) async {
+    final List<String> hapticCalls = [];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'HapticFeedback.vibrate') {
+          hapticCalls.add(methodCall.arguments as String);
+        }
+        return null;
+      },
+    );
+
     final store = MemoryMetadataStore();
     final repository = await DemoLibraryRepository.open(store);
     final bloc = LibraryBloc(repository);
@@ -54,6 +66,9 @@ void main() {
     expect(travel, lessThanOrEqualTo(80.5));
     expect(travel, greaterThanOrEqualTo(56.0));
 
+    // Verify subtle haptic on soft bump threshold
+    expect(hapticCalls, contains('HapticFeedbackType.lightImpact'));
+
     // Release gesture
     await gesture.up();
     await tester.pumpAndSettle();
@@ -63,8 +78,20 @@ void main() {
     expect((finalTopLeft.dx - initialTopLeft.dx).abs(), lessThan(1.0));
   });
 
-  testWidgets('swiping left clamps travel to soft border and triggers archive',
+  testWidgets(
+      'swiping left clamps travel to soft border and triggers archive with light haptic on bump and heavy haptic on delete',
       (tester) async {
+    final List<String> hapticCalls = [];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'HapticFeedback.vibrate') {
+          hapticCalls.add(methodCall.arguments as String);
+        }
+        return null;
+      },
+    );
+
     final store = MemoryMetadataStore();
     final repository = await DemoLibraryRepository.open(store);
     final bloc = LibraryBloc(repository);
@@ -106,8 +133,14 @@ void main() {
     expect(travel, greaterThanOrEqualTo(-80.5));
     expect(travel, lessThanOrEqualTo(-56.0));
 
+    // Verify subtle haptic on soft bump threshold
+    expect(hapticCalls, contains('HapticFeedbackType.lightImpact'));
+
     await gesture.up();
     await tester.pumpAndSettle();
+
+    // Verify deep haptic on delete trigger
+    expect(hapticCalls, contains('HapticFeedbackType.heavyImpact'));
 
     // Verify the item has been archived in the bloc state
     expect(bloc.state.item(item.id)?.archived, isTrue);

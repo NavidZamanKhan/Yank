@@ -29,7 +29,6 @@ class YankItemCard extends StatelessWidget {
   }
 
   void _archive(BuildContext context) {
-    HapticFeedback.selectionClick();
     context.read<LibraryBloc>().add(ItemArchiveToggled(item.id));
   }
 
@@ -251,7 +250,7 @@ class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
     final clamped = _clampDrag(newRaw);
 
     if (clamped.abs() >= _triggerThreshold && !_hasTriggeredHaptic) {
-      HapticFeedback.mediumImpact();
+      HapticFeedback.lightImpact();
       _hasTriggeredHaptic = true;
     } else if (clamped.abs() < _triggerThreshold && _hasTriggeredHaptic) {
       _hasTriggeredHaptic = false;
@@ -296,6 +295,7 @@ class _ClampedSwipeCardState extends State<_ClampedSwipeCard>
   }
 
   Future<void> _dismissAndArchive() async {
+    HapticFeedback.heavyImpact();
     setState(() {
       _isDismissing = true;
       _hasTriggeredHaptic = false;
