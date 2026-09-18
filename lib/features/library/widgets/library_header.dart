@@ -41,8 +41,13 @@ class LibraryHeader extends StatelessWidget {
     ),
     child: GestureDetector(
       behavior: HitTestBehavior.translucent,
+      onVerticalDragUpdate: (details) {
+        if (details.primaryDelta != null && details.primaryDelta! > 10.0) {
+          onSearch?.call();
+        }
+      },
       onVerticalDragEnd: (details) {
-        if (details.primaryVelocity != null && details.primaryVelocity! > 160) {
+        if (details.primaryVelocity != null && details.primaryVelocity! > 80) {
           onSearch?.call();
         }
       },
@@ -88,57 +93,66 @@ class LibraryHeader extends StatelessWidget {
             listenable: focusNode,
             builder: (context, _) {
               final isFocused = focusNode.hasFocus;
-              return AnimatedContainer(
+              return AnimatedScale(
+                scale: isFocused ? 1.015 : 1.0,
                 duration: YankMotion.duration(
                   context,
                   const Duration(milliseconds: 200),
                 ),
                 curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: context.colors.iris.withValues(alpha: 0.12),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : const [],
-                ),
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  onChanged: onQuery,
-                  style: const TextStyle(fontSize: 14),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: isFocused ? 'Type to search...' : 'Find anything',
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 12,
-                    ),
-                    prefixIcon: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: Icon(
-                        LucideIcons.search,
-                        key: ValueKey(isFocused),
-                        size: 17,
-                        color: isFocused
-                            ? context.colors.iris
-                            : context.colors.muted,
+                child: AnimatedContainer(
+                  duration: YankMotion.duration(
+                    context,
+                    const Duration(milliseconds: 200),
+                  ),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: isFocused
+                        ? [
+                            BoxShadow(
+                              color:
+                                  context.colors.iris.withValues(alpha: 0.18),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    onChanged: onQuery,
+                    style: const TextStyle(fontSize: 14),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: isFocused ? 'Type to search...' : 'Find anything',
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 12,
                       ),
+                      prefixIcon: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          LucideIcons.search,
+                          key: ValueKey(isFocused),
+                          size: 17,
+                          color: isFocused
+                              ? context.colors.iris
+                              : context.colors.muted,
+                        ),
+                      ),
+                      suffixIcon: state.query.isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: () {
+                                controller.clear();
+                                onQuery('');
+                              },
+                              tooltip: 'Clear search',
+                              icon: const Icon(LucideIcons.x, size: 16),
+                            ),
                     ),
-                    suffixIcon: state.query.isEmpty
-                        ? null
-                        : IconButton(
-                            onPressed: () {
-                              controller.clear();
-                              onQuery('');
-                            },
-                            tooltip: 'Clear search',
-                            icon: const Icon(LucideIcons.x, size: 16),
-                          ),
                   ),
                 ),
               );

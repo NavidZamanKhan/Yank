@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion/yank_motion.dart';
@@ -39,22 +38,54 @@ class _LibraryFeedState extends State<LibraryFeed> {
   ItemKind? _lastKind;
   bool _isForward = true;
   bool _searchTriggered = false;
+  final ScrollController _scrollController = ScrollController();
+  double? _pointerDownY;
+  double? _pointerDownX;
+  double _pointerDownScrollOffset = 0.0;
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownY = event.position.dy;
+    _pointerDownX = event.position.dx;
+    _pointerDownScrollOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (_pointerDownY == null || _searchTriggered || widget.onSearch == null) {
+      return;
+    }
+    final dy = event.position.dy - _pointerDownY!;
+    final dx = (event.position.dx - _pointerDownX!).abs();
+    if (dy > 18.0 && dy > dx * 1.2 && _pointerDownScrollOffset <= 12.0) {
+      _searchTriggered = true;
+      widget.onSearch!();
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    _pointerDownY = null;
+    _pointerDownX = null;
+    _searchTriggered = false;
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _pointerDownY = null;
+    _pointerDownX = null;
+    _searchTriggered = false;
+  }
 
   bool _onScrollNotification(ScrollNotification notification) {
     if (widget.onSearch == null) return false;
 
     if (notification is ScrollUpdateNotification) {
-      if (notification.metrics.pixels < -28.0 ||
-          (notification.metrics.pixels <= 0 &&
-              notification.scrollDelta != null &&
-              notification.scrollDelta! < -20.0)) {
+      if (notification.metrics.pixels < -8.0) {
         if (!_searchTriggered) {
           _searchTriggered = true;
           widget.onSearch!();
         }
       }
     } else if (notification is OverscrollNotification) {
-      if (notification.overscroll < -16.0) {
+      if (notification.overscroll < -4.0) {
         if (!_searchTriggered) {
           _searchTriggered = true;
           widget.onSearch!();
@@ -62,11 +93,6 @@ class _LibraryFeedState extends State<LibraryFeed> {
       }
     } else if (notification is ScrollEndNotification) {
       _searchTriggered = false;
-    } else if (notification is UserScrollNotification) {
-      if (notification.direction == ScrollDirection.idle &&
-          notification.metrics.pixels >= 0) {
-        _searchTriggered = false;
-      }
     }
     return false;
   }
@@ -133,6 +159,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
       }
       content = ListView.builder(
         key: PageStorageKey(filterKey),
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
@@ -235,12 +262,25 @@ class _LibraryFeedState extends State<LibraryFeed> {
       },
       child: KeyedSubtree(
         key: currentKey,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: _onScrollNotification,
-          child: content,
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _onPointerDown,
+          onPointerMove: _onPointerMove,
+          onPointerUp: _onPointerUp,
+          onPointerCancel: _onPointerCancel,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: content,
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }
 
