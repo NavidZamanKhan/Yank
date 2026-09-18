@@ -475,5 +475,100 @@ void main() {
     // MUST trigger search when pulling down from the top
     expect(searchTriggered, isTrue);
   });
+
+  testWidgets(
+      'LibraryFeed does not trigger onSearch during continuous drag starting from down in list',
+      (tester) async {
+    var searchTriggered = false;
+    final items = List.generate(
+      20,
+      (i) => YankItem(
+        id: 'item-$i',
+        kind: ItemKind.text,
+        title: 'Item $i',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    );
+    final state = LibraryState(items: items);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Scroll down to offset ~300
+    await tester.drag(find.byType(ListView), const Offset(0.0, -300.0));
+    await tester.pumpAndSettle();
+    expect(searchTriggered, isFalse);
+
+    // Drag 500px down in one gesture so it passes 0 into overscroll
+    await tester.drag(find.byType(ListView), const Offset(0.0, 500.0));
+    await tester.pump();
+
+    // Because the drag started while extentBefore > 0, it must NOT trigger search
+    expect(searchTriggered, isFalse);
+  });
+
+  testWidgets(
+      'LibraryFeed triggers onSearch when trackpad pan down is performed at top',
+      (tester) async {
+    var searchTriggered = false;
+    final items = List.generate(
+      5,
+      (i) => YankItem(
+        id: 'item-$i',
+        kind: ItemKind.text,
+        title: 'Item $i',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    );
+    final state = LibraryState(items: items);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isFalse);
+
+    final location = tester.getCenter(find.byType(ListView));
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.trackpad);
+    await gesture.panZoomStart(location);
+    await gesture.panZoomUpdate(location, pan: const Offset(0.0, 40.0));
+    await tester.pump();
+
+    expect(searchTriggered, isTrue);
+
+    await gesture.panZoomEnd();
+    await tester.pumpAndSettle();
+  });
 }
 
