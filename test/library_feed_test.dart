@@ -637,5 +637,84 @@ void main() {
     // Allow debounce timer to settle
     await tester.pump(const Duration(milliseconds: 400));
   });
+
+  testWidgets(
+      'LibraryFeed retains search focus throughout pull gesture and unfocuses on content scroll',
+      (tester) async {
+    final focusNode = FocusNode();
+    final controller = TextEditingController();
+    addTearDown(focusNode.dispose);
+    addTearDown(controller.dispose);
+
+    final items = List.generate(
+      20,
+      (i) => YankItem(
+        id: 'item-$i',
+        kind: ItemKind.text,
+        title: 'Item $i',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    );
+    final state = LibraryState(items: items);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: Column(
+            children: [
+              TextField(controller: controller, focusNode: focusNode),
+              Expanded(
+                child: LibraryFeed(
+                  state: state,
+                  wide: false,
+                  onOpen: (_) {},
+                  onPreview: (_) {},
+                  onClear: () {},
+                  onCapture: () {},
+                  onBrowse: () {},
+                  onSearch: () => focusNode.requestFocus(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(focusNode.hasFocus, isFalse);
+
+    // Pull down slowly like a real finger across multiple frames
+    final center = tester.getCenter(find.byType(ListView));
+    final gesture = await tester.startGesture(center, kind: PointerDeviceKind.touch);
+
+    for (var i = 0; i < 12; i++) {
+      await gesture.moveBy(const Offset(0.0, 5.0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    // Must have gained focus and retained focus mid-pull
+    expect(focusNode.hasFocus, isTrue);
+
+    // Release finger and settle
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    // Must remain focused after release
+    expect(focusNode.hasFocus, isTrue);
+
+    // Now drag down into content (scroll list down)
+    final scrollGesture = await tester.startGesture(center, kind: PointerDeviceKind.touch);
+    for (var i = 0; i < 8; i++) {
+      await scrollGesture.moveBy(const Offset(0.0, -15.0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await scrollGesture.up();
+    await tester.pumpAndSettle();
+
+    // Scrolling down into content must have dismissed focus
+    expect(focusNode.hasFocus, isFalse);
+  });
 }
 

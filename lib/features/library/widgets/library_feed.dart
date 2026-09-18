@@ -72,6 +72,10 @@ class _LibraryFeedState extends State<LibraryFeed> {
     } else if (notification is ScrollUpdateNotification) {
       if (notification.metrics.pixels > 0.0) {
         _isPullingFromTop = false;
+        // When dragging into content, dismiss keyboard naturally
+        if (hasDrag) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
       }
       if (_isPullingFromTop && hasDrag) {
         // On BouncingScrollPhysics, pulling down past top makes pixels negative.
@@ -186,7 +190,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
         padding: EdgeInsets.fromLTRB(
           widget.wide ? 24 : 15,
           12,
