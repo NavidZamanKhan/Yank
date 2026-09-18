@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion/yank_motion.dart';
@@ -37,47 +38,56 @@ class _LibraryFeedState extends State<LibraryFeed> {
   late LibrarySection _lastSection;
   ItemKind? _lastKind;
   bool _isForward = true;
+  bool _isPullingFromTop = false;
   bool _searchTriggered = false;
   final ScrollController _scrollController = ScrollController();
-  double? _pointerDownY;
-  double? _pointerDownX;
-  double _pointerDownScrollOffset = 0.0;
-
-  void _onPointerDown(PointerDownEvent event) {
-    _pointerDownY = event.position.dy;
-    _pointerDownX = event.position.dx;
-    _pointerDownScrollOffset =
-        _scrollController.hasClients ? _scrollController.offset : 0.0;
-  }
-
-  void _onPointerMove(PointerMoveEvent event) {
-    if (_pointerDownY == null || _searchTriggered || widget.onSearch == null) {
-      return;
-    }
-    final dy = event.position.dy - _pointerDownY!;
-    final dx = (event.position.dx - _pointerDownX!).abs();
-    // Only trigger if the drag was initiated while resting at the top of the feed
-    if (dy > 18.0 && dy > dx * 1.2 && _pointerDownScrollOffset <= 1.0) {
-      _searchTriggered = true;
-      widget.onSearch!();
-    }
-  }
-
-  void _onPointerUp(PointerUpEvent event) {
-    _pointerDownY = null;
-    _pointerDownX = null;
-    _searchTriggered = false;
-  }
-
-  void _onPointerCancel(PointerCancelEvent event) {
-    _pointerDownY = null;
-    _pointerDownX = null;
-    _searchTriggered = false;
-  }
 
   bool _onScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollEndNotification) {
+    if (widget.onSearch == null) return false;
+
+    final hasDrag = switch (notification) {
+      ScrollStartNotification s => s.dragDetails != null,
+      ScrollUpdateNotification u => u.dragDetails != null,
+      OverscrollNotification o => o.dragDetails != null,
+      _ => false,
+    };
+
+    if (notification is ScrollStartNotification) {
+      // Exactly like RefreshIndicator: only start pull-to-search if the user
+      // initiates the drag while resting at the top boundary (extentBefore <= 0.0).
+      if (hasDrag && notification.metrics.extentBefore <= 0.0) {
+        _isPullingFromTop = true;
+        _searchTriggered = false;
+      } else {
+        _isPullingFromTop = false;
+      }
+    } else if (notification is ScrollUpdateNotification) {
+      if (_isPullingFromTop && hasDrag) {
+        // On BouncingScrollPhysics, pulling down past the top makes pixels negative.
+        if (notification.metrics.pixels <= -18.0 && !_searchTriggered) {
+          _searchTriggered = true;
+          widget.onSearch!();
+        }
+      }
+      // If the drag ended and scroll returned to normal range, clear the pulling flag
+      if (!hasDrag && notification.metrics.pixels >= 0.0) {
+        _isPullingFromTop = false;
+      }
+    } else if (notification is OverscrollNotification) {
+      // On ClampingScrollPhysics, overscroll captures the pull distance
+      if (_isPullingFromTop && hasDrag) {
+        if (notification.overscroll < -10.0 && !_searchTriggered) {
+          _searchTriggered = true;
+          widget.onSearch!();
+        }
+      }
+    } else if (notification is ScrollEndNotification) {
+      _isPullingFromTop = false;
       _searchTriggered = false;
+    } else if (notification is UserScrollNotification) {
+      if (notification.direction == ScrollDirection.idle) {
+        _isPullingFromTop = false;
+      }
     }
     return false;
   }
@@ -247,16 +257,9 @@ class _LibraryFeedState extends State<LibraryFeed> {
       },
       child: KeyedSubtree(
         key: currentKey,
-        child: Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: _onPointerDown,
-          onPointerMove: _onPointerMove,
-          onPointerUp: _onPointerUp,
-          onPointerCancel: _onPointerCancel,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _onScrollNotification,
-            child: content,
-          ),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: content,
         ),
       ),
     );
