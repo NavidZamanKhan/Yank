@@ -65,6 +65,11 @@ void main() {
     final closeBtn = find.byIcon(LucideIcons.x);
     expect(closeBtn, findsOneWidget);
     await tester.tap(closeBtn);
+
+    // Pump midway through reverse animation (160ms) to verify sheet is actively animating down
+    await tester.pump(const Duration(milliseconds: 160));
+    expect(find.text('Something worth keeping.'), findsOneWidget);
+
     await tester.pumpAndSettle();
 
     // Verify sheet is closed and main screen is restored.

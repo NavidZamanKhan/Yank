@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,8 +46,36 @@ class _LibraryPageState extends State<LibraryPage>
     super.dispose();
   }
 
+  Future<void> _waitForSheetClose() async {
+    if (!_sheetAnimation.isAnimating) {
+      return;
+    }
+    final completer = Completer<void>();
+    void listener(AnimationStatus status) {
+      if (status == AnimationStatus.dismissed) {
+        _sheetAnimation.removeStatusListener(listener);
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    }
+
+    _sheetAnimation.addStatusListener(listener);
+    if (_sheetAnimation.status == AnimationStatus.dismissed) {
+      _sheetAnimation.removeStatusListener(listener);
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+    try {
+      await completer.future;
+    } finally {
+      _sheetAnimation.removeStatusListener(listener);
+    }
+  }
+
   Future<void> _capture() async {
-    if (_captureOpen) {
+    if (_captureOpen || _sheetAnimation.isAnimating) {
       return;
     }
     _captureOpen = true;
@@ -54,10 +84,8 @@ class _LibraryPageState extends State<LibraryPage>
       context,
       animationController: _sheetAnimation,
     );
+    await _waitForSheetClose();
     _captureOpen = false;
-    if (mounted && _sheetAnimation.value != 0.0) {
-      _sheetAnimation.value = 0.0;
-    }
     if (!mounted || saved != true) {
       return;
     }
@@ -74,6 +102,9 @@ class _LibraryPageState extends State<LibraryPage>
   }
 
   Future<void> _preview(YankItem item, bool widePreview) async {
+    if (_sheetAnimation.isAnimating) {
+      return;
+    }
     _searchFocus.unfocus();
     if (_bloc.state.availability(item.id) == LocalAvailability.cloud) {
       _bloc.add(DownloadRequested(item.id));
@@ -86,20 +117,19 @@ class _LibraryPageState extends State<LibraryPage>
         item.id,
         animationController: _sheetAnimation,
       );
-      if (mounted && _sheetAnimation.value != 0.0) {
-        _sheetAnimation.value = 0.0;
-      }
+      await _waitForSheetClose();
     }
   }
 
   Future<void> _showSettings() async {
+    if (_sheetAnimation.isAnimating) {
+      return;
+    }
     await showSettingsSheet(
       context,
       animationController: _sheetAnimation,
     );
-    if (mounted && _sheetAnimation.value != 0.0) {
-      _sheetAnimation.value = 0.0;
-    }
+    await _waitForSheetClose();
   }
 
   Future<void> _open(YankItem item, bool widePreview) async {
