@@ -56,7 +56,8 @@ class _LibraryFeedState extends State<LibraryFeed> {
     }
     final dy = event.position.dy - _pointerDownY!;
     final dx = (event.position.dx - _pointerDownX!).abs();
-    if (dy > 18.0 && dy > dx * 1.2 && _pointerDownScrollOffset <= 12.0) {
+    // Only trigger if the drag was initiated while resting at the top of the feed
+    if (dy > 18.0 && dy > dx * 1.2 && _pointerDownScrollOffset <= 1.0) {
       _searchTriggered = true;
       widget.onSearch!();
     }
@@ -75,23 +76,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
   }
 
   bool _onScrollNotification(ScrollNotification notification) {
-    if (widget.onSearch == null) return false;
-
-    if (notification is ScrollUpdateNotification) {
-      if (notification.metrics.pixels < -8.0) {
-        if (!_searchTriggered) {
-          _searchTriggered = true;
-          widget.onSearch!();
-        }
-      }
-    } else if (notification is OverscrollNotification) {
-      if (notification.overscroll < -4.0) {
-        if (!_searchTriggered) {
-          _searchTriggered = true;
-          widget.onSearch!();
-        }
-      }
-    } else if (notification is ScrollEndNotification) {
+    if (notification is ScrollEndNotification) {
       _searchTriggered = false;
     }
     return false;

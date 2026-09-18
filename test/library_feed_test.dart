@@ -417,4 +417,62 @@ void main() {
     expect(searchTriggered, isTrue);
     expect(focusNode.hasFocus, isTrue);
   });
+
+  testWidgets(
+      'LibraryFeed does not trigger onSearch when scrolling up fast and bouncing at the top',
+      (tester) async {
+    var searchTriggered = false;
+    final items = List.generate(
+      20,
+      (i) => YankItem(
+        id: 'item-$i',
+        kind: ItemKind.text,
+        title: 'Item $i',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    );
+    final state = LibraryState(items: items);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Scroll down into the feed
+    await tester.drag(find.byType(ListView), const Offset(0.0, -400.0));
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isFalse);
+
+    // Fast fling up toward the top with high velocity so it hits top and bounces
+    await tester.fling(find.byType(ListView), const Offset(0.0, 500.0), 3000.0);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    // Must NOT have triggered search
+    expect(searchTriggered, isFalse);
+
+    // Now intentionally drag down while resting at the top
+    await tester.drag(find.byType(ListView), const Offset(0.0, 50.0));
+    await tester.pump();
+
+    // MUST trigger search when pulling down from the top
+    expect(searchTriggered, isTrue);
+  });
 }
+
