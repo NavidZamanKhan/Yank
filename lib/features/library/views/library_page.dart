@@ -192,8 +192,8 @@ class _LibraryPageState extends State<LibraryPage>
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? Colors.black
-            : const Color(0xFF1B1A20),
+            ? const Color(0xFF121116)
+            : const Color(0xFFDDD9D2),
         body: AnimatedBuilder(
           animation: _sheetAnimation,
           builder: (context, child) {
@@ -205,38 +205,46 @@ class _LibraryPageState extends State<LibraryPage>
                     _sheetAnimation.value.clamp(0.0, 1.0),
                   );
 
-            final scale = 1.0 - (0.045 * t);
-            final translateY = 14.0 * t;
-            final radius = 18.0 * t;
-            final dimAlpha = (0.12 * t * 255).round();
+            final scale = 1.0 - (0.03 * t);
+            final translateY = 12.0 * t;
+            final radius = 28.0 * t;
+            final dimAlpha = (0.05 * t * 255).round();
 
             return Transform.translate(
               offset: Offset(0, translateY),
               child: Transform.scale(
                 scale: scale,
                 alignment: Alignment.topCenter,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(radius),
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.colors.canvas,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: context.colors.canvas,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(radius),
                     ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        child!,
-                        if (dimAlpha > 0)
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: ColoredBox(
-                                color: Colors.black.withAlpha(dimAlpha),
-                              ),
+                    boxShadow: t > 0
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08 * t),
+                              blurRadius: 16 * t,
+                              offset: Offset(0, 4 * t),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      child!,
+                      if (dimAlpha > 0)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: ColoredBox(
+                              color: Colors.black.withAlpha(dimAlpha),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
