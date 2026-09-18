@@ -7,7 +7,7 @@ import 'package:yank/features/library/widgets/library_feed.dart';
 
 void main() {
   testWidgets(
-      'LibraryFeed slides forward from right when switching to Yank and backward from left when returning to Library',
+      'LibraryFeed swaps pages horizontally with full-length slide when switching sections',
       (tester) async {
     final items = [
       YankItem(
@@ -65,17 +65,28 @@ void main() {
     });
     await tester.pump();
 
-    // Mid-way through forward slide transition (140ms)
-    await tester.pump(const Duration(milliseconds: 140));
+    // Mid-way through horizontal transition (200ms of 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
 
-    // Both incoming and outgoing items exist during transition
     final slideTransitions = tester.widgetList<SlideTransition>(
       find.byType(SlideTransition),
-    );
+    ).toList();
     expect(slideTransitions.length, greaterThanOrEqualTo(2));
 
-    // Complete forward slide
-    await tester.pump(const Duration(milliseconds: 160));
+    // In forward horizontal swap:
+    // Incoming slides in from right (dx > 0.0)
+    // Outgoing exits towards left (dx < 0.0)
+    final incomingSlide = slideTransitions.firstWhere(
+      (s) => s.position.value.dx > 0.0,
+    );
+    final outgoingSlide = slideTransitions.firstWhere(
+      (s) => s.position.value.dx < 0.0,
+    );
+    expect(incomingSlide.position.value.dy, equals(0.0));
+    expect(outgoingSlide.position.value.dy, equals(0.0));
+
+    // Complete forward horizontal slide
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
     expect(find.text('Yanked Item 2'), findsOneWidget);
@@ -87,11 +98,28 @@ void main() {
     });
     await tester.pump();
 
-    // Mid-way through backward slide transition (140ms)
-    await tester.pump(const Duration(milliseconds: 140));
+    // Mid-way through backward horizontal transition (200ms)
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final backSlides = tester.widgetList<SlideTransition>(
+      find.byType(SlideTransition),
+    ).toList();
+    expect(backSlides.length, greaterThanOrEqualTo(2));
+
+    // In backward horizontal swap:
+    // Incoming slides in from left (dx < 0.0)
+    // Outgoing exits towards right (dx > 0.0)
+    final backIncomingSlide = backSlides.firstWhere(
+      (s) => s.position.value.dx < 0.0,
+    );
+    final backOutgoingSlide = backSlides.firstWhere(
+      (s) => s.position.value.dx > 0.0,
+    );
+    expect(backIncomingSlide.position.value.dy, equals(0.0));
+    expect(backOutgoingSlide.position.value.dy, equals(0.0));
 
     // Complete backward slide
-    await tester.pump(const Duration(milliseconds: 160));
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
     expect(find.text('Library Item 1'), findsOneWidget);
@@ -99,7 +127,7 @@ void main() {
   });
 
   testWidgets(
-      'LibraryFeed slides forward when selecting category filter and backward when returning to All',
+      'LibraryFeed swaps pages horizontally when selecting category filter and returning to All',
       (tester) async {
     final items = [
       YankItem(
@@ -154,14 +182,16 @@ void main() {
       state = state.copyWith(kind: ItemKind.photo);
     });
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 140));
+    await tester.pump(const Duration(milliseconds: 200));
 
-    final slideTransitions = tester.widgetList<SlideTransition>(
+    final forwardSlides = tester.widgetList<SlideTransition>(
       find.byType(SlideTransition),
-    );
-    expect(slideTransitions.length, greaterThanOrEqualTo(2));
+    ).toList();
+    expect(forwardSlides.length, greaterThanOrEqualTo(2));
+    expect(forwardSlides.any((s) => s.position.value.dx > 0.0), isTrue);
+    expect(forwardSlides.any((s) => s.position.value.dx < 0.0), isTrue);
 
-    await tester.pump(const Duration(milliseconds: 160));
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
     expect(find.text('Sunset Photo'), findsOneWidget);
@@ -172,97 +202,19 @@ void main() {
       state = state.copyWith(kind: null);
     });
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 140));
-    await tester.pump(const Duration(milliseconds: 160));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final backwardSlides = tester.widgetList<SlideTransition>(
+      find.byType(SlideTransition),
+    ).toList();
+    expect(backwardSlides.length, greaterThanOrEqualTo(2));
+    expect(backwardSlides.any((s) => s.position.value.dx < 0.0), isTrue);
+    expect(backwardSlides.any((s) => s.position.value.dx > 0.0), isTrue);
+
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
     expect(find.text('Sunset Photo'), findsOneWidget);
     expect(find.text('Text Note'), findsOneWidget);
   });
-
-  testWidgets(
-      'LibraryFeed delays incoming content fade-in until slide is underway',
-      (tester) async {
-    final items = [
-      YankItem(
-        id: 'item-1',
-        kind: ItemKind.text,
-        title: 'Alpha Note',
-        createdAt: DateTime(2026, 9, 18),
-      ),
-      YankItem(
-        id: 'item-2',
-        kind: ItemKind.link,
-        title: 'Beta Link',
-        createdAt: DateTime(2026, 9, 18),
-        yankedAt: DateTime(2026, 9, 18),
-      ),
-    ];
-
-    late StateSetter setWidgetState;
-    var state = LibraryState(
-      items: items,
-      section: LibrarySection.library,
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: YankTheme.build(Brightness.light),
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) {
-              setWidgetState = setState;
-              return LibraryFeed(
-                state: state,
-                wide: false,
-                onOpen: (_) {},
-                onPreview: (_) {},
-                onClear: () {},
-                onCapture: () {},
-                onBrowse: () {},
-              );
-            },
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Alpha Note'), findsOneWidget);
-
-    // Switch section forward from Library to Yank
-    setWidgetState(() {
-      state = state.copyWith(section: LibrarySection.yank);
-    });
-    await tester.pump();
-
-    // At 50ms (t ~ 0.11 < 0.24 threshold of incoming fade interval):
-    // Slide is underway but incoming child fade has not started yet (opacity == 0.0)
-    await tester.pump(const Duration(milliseconds: 50));
-
-    final earlyFades = tester.widgetList<FadeTransition>(
-      find.byType(FadeTransition),
-    );
-    expect(earlyFades.any((f) => f.opacity.value == 0.0), isTrue);
-
-    // At 220ms (t = 0.50 > 0.24 threshold):
-    // Incoming child has smoothly faded into visible range
-    await tester.pump(const Duration(milliseconds: 170));
-
-    final midFades = tester.widgetList<FadeTransition>(
-      find.byType(FadeTransition),
-    );
-    expect(
-      midFades.any((f) => f.opacity.value > 0.0 && f.opacity.value < 1.0),
-      isTrue,
-    );
-
-    // Settle to completion
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Beta Link'), findsOneWidget);
-    expect(find.text('Alpha Note'), findsNothing);
-  });
 }
-

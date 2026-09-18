@@ -134,14 +134,14 @@ class _LibraryFeedState extends State<LibraryFeed> {
     return AnimatedSwitcher(
       duration: YankMotion.duration(
         context,
-        const Duration(milliseconds: 440),
+        const Duration(milliseconds: 400),
       ),
       reverseDuration: YankMotion.duration(
         context,
-        const Duration(milliseconds: 380),
+        const Duration(milliseconds: 400),
       ),
-      switchInCurve: Curves.linear,
-      switchOutCurve: Curves.linear,
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
       layoutBuilder: (currentChild, previousChildren) => ClipRect(
         child: Stack(
           fit: StackFit.expand,
@@ -155,34 +155,27 @@ class _LibraryFeedState extends State<LibraryFeed> {
         final isCurrent = child.key == currentKey;
         final beginOffset = _isForward
             ? (isCurrent
-                ? const Offset(0.28, 0.0)
-                : const Offset(-0.28, 0.0))
+                ? const Offset(1.0, 0.0)
+                : const Offset(-1.0, 0.0))
             : (isCurrent
-                ? const Offset(-0.28, 0.0)
-                : const Offset(0.28, 0.0));
+                ? const Offset(-1.0, 0.0)
+                : const Offset(1.0, 0.0));
 
-        final slideCurve = isCurrent ? Curves.easeOutCubic : Curves.easeInCubic;
-        final fadeInterval = isCurrent
-            ? const Interval(0.24, 1.0, curve: Curves.easeOut)
-            : const Interval(0.0, 0.60, curve: Curves.easeIn);
+        final slideTransition = SlideTransition(
+          position: Tween<Offset>(
+            begin: beginOffset,
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        );
+
+        if (isCurrent) {
+          return slideTransition;
+        }
 
         return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: fadeInterval,
-          ),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: beginOffset,
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: slideCurve,
-              ),
-            ),
-            child: child,
-          ),
+          opacity: animation,
+          child: slideTransition,
         );
       },
       child: KeyedSubtree(
