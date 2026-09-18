@@ -31,8 +31,8 @@ class _LibraryPageState extends State<LibraryPage>
   bool _captureOpen = false;
   late final AnimationController _sheetAnimation = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 320),
-    reverseDuration: const Duration(milliseconds: 280),
+    duration: const Duration(milliseconds: 400),
+    reverseDuration: const Duration(milliseconds: 320),
   );
   LibraryBloc get _bloc => context.read<LibraryBloc>();
 
@@ -191,29 +191,37 @@ class _LibraryPageState extends State<LibraryPage>
         },
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black
+            : const Color(0xFFDDD9D2),
         body: AnimatedBuilder(
           animation: _sheetAnimation,
           builder: (context, child) {
             final reduced = MediaQuery.disableAnimationsOf(context);
             final isWide = MediaQuery.sizeOf(context).width >= 900;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final curve = _sheetAnimation.status == AnimationStatus.reverse
+                ? Curves.easeInCubic
+                : Curves.easeOutCubic;
             final t = (reduced || isWide)
                 ? 0.0
-                : Curves.easeOutCubic.transform(
+                : curve.transform(
                     _sheetAnimation.value.clamp(0.0, 1.0),
                   );
 
             final scale = 1.0 - (0.075 * t);
             final translateY = 50.0 * t;
             final radius = 34.0 * t;
-            final dimAlpha = (0.22 * t * 255).round();
+            final dimAlpha = (isDark ? 0.22 : 0.04) * t;
 
             return AnnotatedRegion<SystemUiOverlayStyle>(
-              value: t > 0.4
-                  ? SystemUiOverlayStyle.light
-                  : (Theme.of(context).brightness == Brightness.dark
+              value: (isDark
                       ? SystemUiOverlayStyle.light
-                      : SystemUiOverlayStyle.dark),
+                      : SystemUiOverlayStyle.dark)
+                  .copyWith(
+                    statusBarColor: Colors.transparent,
+                    systemNavigationBarColor: Colors.transparent,
+                  ),
               child: Transform.translate(
                 offset: Offset(0, translateY),
                 child: Transform.scale(
@@ -226,9 +234,11 @@ class _LibraryPageState extends State<LibraryPage>
                       boxShadow: t > 0
                           ? [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.45 * t),
-                                blurRadius: 28 * t,
-                                offset: Offset(0, 8 * t),
+                                color: Colors.black.withValues(
+                                  alpha: (isDark ? 0.45 : 0.10) * t,
+                                ),
+                                blurRadius: (isDark ? 28.0 : 20.0) * t,
+                                offset: Offset(0, (isDark ? 8.0 : 5.0) * t),
                               ),
                             ]
                           : null,
@@ -242,7 +252,9 @@ class _LibraryPageState extends State<LibraryPage>
                           Positioned.fill(
                             child: IgnorePointer(
                               child: ColoredBox(
-                                color: Colors.black.withAlpha(dimAlpha),
+                                color: Colors.black.withValues(
+                                  alpha: dimAlpha,
+                                ),
                               ),
                             ),
                           ),

@@ -20,6 +20,10 @@ Future<void> showSettingsSheet(
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 620),
       transitionAnimationController: animationController,
+      sheetAnimationStyle: const AnimationStyle(
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
       builder: (context) => const SettingsSheet(),
     );
 

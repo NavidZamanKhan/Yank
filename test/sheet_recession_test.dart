@@ -70,6 +70,48 @@ void main() {
     // Verify sheet is closed and main screen is restored.
     expect(find.text('Something worth keeping.'), findsNothing);
     expect(find.byTooltip('Add something'), findsOneWidget);
+
+    // Verify light mode background behind card is soft stone gray.
+    final scaffoldFinder = find.byType(Scaffold);
+    final scaffold = tester.widget<Scaffold>(scaffoldFinder.first);
+    expect(scaffold.backgroundColor, const Color(0xFFDDD9D2));
+  });
+
+  testWidgets('Dark mode background behind card is pure black', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = MemoryMetadataStore();
+    await store.write(
+      DemoAuthRepository.storageKey,
+      jsonEncode(
+        const AuthUser(
+          email: 'test@yank.demo',
+          provider: AuthProvider.google,
+        ).toJson(),
+      ),
+    );
+    final repository = await DemoLibraryRepository.open(store);
+    final auth = await DemoAuthRepository.open(store);
+
+    await tester.pumpWidget(
+      YankApp(
+        library: repository,
+        authRepository: auth,
+        settingsRepository: SettingsRepository(store),
+        initialAppearance: const AppearanceSettings(themeMode: ThemeMode.dark),
+        audioFactory: _SilentAudio.new,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldFinder = find.byType(Scaffold);
+    final scaffold = tester.widget<Scaffold>(scaffoldFinder.first);
+    expect(scaffold.backgroundColor, Colors.black);
   });
 }
 

@@ -21,6 +21,10 @@ Future<bool?> showCaptureSheet(
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 620),
       transitionAnimationController: animationController,
+      sheetAnimationStyle: const AnimationStyle(
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
       builder: (context) => BlocProvider(
         create: (_) => CaptureBloc(context.read<LibraryRepository>()),
         child: const CaptureSheet(),

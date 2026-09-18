@@ -22,6 +22,10 @@ Future<void> showItemPreview(
       useSafeArea: true,
       constraints: const BoxConstraints(maxWidth: 720),
       transitionAnimationController: animationController,
+      sheetAnimationStyle: const AnimationStyle(
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
       builder: (context) => SizedBox(
         height: MediaQuery.sizeOf(context).height * .86,
         child: ItemPreview(id: id),
