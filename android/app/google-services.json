@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "106375247397-vutbr07um6sumetq5deji545k2psvnl4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.yank",
+            "certificate_hash": "6685be1c70e19bfb7dc82d0efcbb4178105194ee"
+          }
+        },
+        {
           "client_id": "106375247397-5ei78m1ca6menmjjlf0sh2i2hpkepq5d.apps.googleusercontent.com",
           "client_type": 3
         }
