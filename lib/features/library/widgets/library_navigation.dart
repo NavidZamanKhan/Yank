@@ -132,6 +132,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
             final totalWidth = constraints.maxWidth;
             const buttonHeight = 46.0;
             const collapsedWidth = 46.0;
+            const squircleRadius = 14.0;
 
             return AnimatedBuilder(
               animation: _expandAnimation,
@@ -196,8 +197,9 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                               message: isExpanded ? '' : 'Add something',
                               child: Material(
                                 color: primaryColor,
+                                clipBehavior: Clip.antiAlias,
                                 borderRadius:
-                                    BorderRadius.circular(buttonHeight / 2),
+                                    BorderRadius.circular(squircleRadius),
                                 elevation: isExpanded ? 2.0 : 0.0,
                                 shadowColor:
                                     primaryColor.withValues(alpha: 0.3),
@@ -210,7 +212,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                     }
                                   },
                                   borderRadius:
-                                      BorderRadius.circular(buttonHeight / 2),
+                                      BorderRadius.circular(squircleRadius),
                                   child: Stack(
                                     alignment: Alignment.center,
                                     children: [
@@ -299,7 +301,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                                 minimumSize: const Size(0, 30),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(15),
+                                                      BorderRadius.circular(10),
                                                 ),
                                               ),
                                               child: const Text(

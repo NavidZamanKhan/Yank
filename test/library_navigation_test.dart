@@ -30,6 +30,16 @@ void main() {
     expect(find.text('Library'), findsOneWidget);
     expect(find.text('Yank'), findsOneWidget);
 
+    // Verify squircle border radius (14) on plus button
+    final plusMaterial = tester.widget<Material>(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Material &&
+            w.borderRadius == BorderRadius.circular(14.0),
+      ),
+    );
+    expect(plusMaterial.borderRadius, equals(BorderRadius.circular(14.0)));
+
     await tester.tap(find.byIcon(LucideIcons.plus));
     expect(captured, isTrue);
   });
@@ -73,6 +83,16 @@ void main() {
     // Advance to full expansion (total 360ms)
     await tester.pump(const Duration(milliseconds: 180));
     expect(find.text('Kept close in Yank.'), findsOneWidget);
+
+    // Verify squircle border radius (14) preserved in expanded notification
+    final expandedMaterial = tester.widget<Material>(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Material &&
+            w.borderRadius == BorderRadius.circular(14.0),
+      ),
+    );
+    expect(expandedMaterial.borderRadius, equals(BorderRadius.circular(14.0)));
 
     // Verify both plus and check are in the rotating stack, with check visible
     expect(find.byIcon(LucideIcons.check), findsOneWidget);
