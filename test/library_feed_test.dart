@@ -217,4 +217,77 @@ void main() {
     expect(find.text('Sunset Photo'), findsOneWidget);
     expect(find.text('Text Note'), findsOneWidget);
   });
+
+  testWidgets(
+      'LibraryFeed applies elastic transit stretch during horizontal page swap',
+      (tester) async {
+    final items = [
+      YankItem(
+        id: 'item-1',
+        kind: ItemKind.text,
+        title: 'Alpha Note',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+      YankItem(
+        id: 'item-2',
+        kind: ItemKind.link,
+        title: 'Beta Link',
+        createdAt: DateTime(2026, 9, 18),
+        yankedAt: DateTime(2026, 9, 18),
+      ),
+    ];
+
+    late StateSetter setWidgetState;
+    var state = LibraryState(
+      items: items,
+      section: LibrarySection.library,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              setWidgetState = setState;
+              return LibraryFeed(
+                state: state,
+                wide: false,
+                onOpen: (_) {},
+                onPreview: (_) {},
+                onClear: () {},
+                onCapture: () {},
+                onBrowse: () {},
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Switch section forward to Yank
+    setWidgetState(() {
+      state = state.copyWith(section: LibrarySection.yank);
+    });
+    await tester.pump();
+
+    // Mid-way through transition (200ms of 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final transforms = tester.widgetList<Transform>(
+      find.byType(Transform),
+    ).toList();
+    final stretched = transforms.where(
+      (t) => t.transform.storage[0] > 1.01,
+    );
+    expect(stretched.isNotEmpty, isTrue);
+
+    // Complete transition
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Beta Link'), findsOneWidget);
+    expect(find.text('Alpha Note'), findsNothing);
+  });
 }

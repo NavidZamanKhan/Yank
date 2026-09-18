@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -161,12 +163,27 @@ class _LibraryFeedState extends State<LibraryFeed> {
                 ? const Offset(-1.0, 0.0)
                 : const Offset(1.0, 0.0));
 
+        final reduced = MediaQuery.disableAnimationsOf(context);
+
         final slideTransition = SlideTransition(
           position: Tween<Offset>(
             begin: beginOffset,
             end: Offset.zero,
           ).animate(animation),
-          child: child,
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              final stretch = reduced
+                  ? 0.0
+                  : math.sin(animation.value * math.pi) * 0.05;
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.diagonal3Values(1.0 + stretch, 1.0, 1.0),
+                child: child,
+              );
+            },
+            child: child,
+          ),
         );
 
         if (isCurrent) {
