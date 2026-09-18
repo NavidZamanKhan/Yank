@@ -305,9 +305,16 @@ class _LibraryPageState extends State<LibraryPage>
               ),
             );
           },
-          child: SafeArea(
-            bottom: false,
-            child: LayoutBuilder(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              if (_searchFocus.hasFocus) {
+                _searchFocus.unfocus();
+              }
+            },
+            child: SafeArea(
+              bottom: false,
+              child: LayoutBuilder(
               builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 900;
                 final widePreview = constraints.maxWidth >= 1180;
@@ -408,5 +415,6 @@ class _LibraryPageState extends State<LibraryPage>
         ),
       ),
     ),
-  );
+  ),
+);
 }

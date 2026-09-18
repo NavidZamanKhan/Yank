@@ -46,6 +46,17 @@ void main() {
       expect(find.text('The first rough idea'), findsOneWidget);
       expect(find.text('Flutter animation guide'), findsNothing);
       expect(tester.takeException(), isNull);
+
+      // Verify tapping on empty space unfocuses the search field
+      final textField = tester.widget<TextField>(find.byType(TextField).first);
+      expect(textField.focusNode!.hasFocus, isTrue);
+
+      // Tap on empty space (e.g. background margin of the feed)
+      await tester.tapAt(const Offset(10.0, 450.0));
+      await tester.pumpAndSettle();
+
+      expect(textField.focusNode!.hasFocus, isFalse);
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
     });
