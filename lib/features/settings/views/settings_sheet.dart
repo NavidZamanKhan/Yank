@@ -22,7 +22,7 @@ Future<void> showSettingsSheet(
       transitionAnimationController: animationController,
       sheetAnimationStyle: const AnimationStyle(
         curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        reverseCurve: Curves.easeInOutCubic,
       ),
       builder: (context) => const SettingsSheet(),
     );

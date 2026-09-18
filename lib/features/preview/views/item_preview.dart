@@ -24,7 +24,7 @@ Future<void> showItemPreview(
       transitionAnimationController: animationController,
       sheetAnimationStyle: const AnimationStyle(
         curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        reverseCurve: Curves.easeInOutCubic,
       ),
       builder: (context) => SizedBox(
         height: MediaQuery.sizeOf(context).height * .86,

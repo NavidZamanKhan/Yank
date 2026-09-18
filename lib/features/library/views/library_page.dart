@@ -201,7 +201,7 @@ class _LibraryPageState extends State<LibraryPage>
             final isWide = MediaQuery.sizeOf(context).width >= 900;
             final isDark = Theme.of(context).brightness == Brightness.dark;
             final curve = _sheetAnimation.status == AnimationStatus.reverse
-                ? Curves.easeInCubic
+                ? Curves.easeInOutCubic
                 : Curves.easeOutCubic;
             final t = (reduced || isWide)
                 ? 0.0
@@ -210,7 +210,7 @@ class _LibraryPageState extends State<LibraryPage>
                   );
 
             final scale = 1.0 - (0.075 * t);
-            final translateY = 50.0 * t;
+            final translateY = 55.0 * t;
             final radius = 34.0 * t;
             final dimAlpha = (isDark ? 0.22 : 0.04) * t;
 
