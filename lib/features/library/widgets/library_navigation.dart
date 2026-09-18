@@ -62,18 +62,15 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
       reverseCurve: const Interval(0.55, 1.0, curve: Curves.easeIn),
     );
 
-    if (widget.notice != null) {
-      _showNotice(widget.notice!);
-    }
+    _lastNoticeSerial = widget.notice?.serial;
   }
 
   @override
   void didUpdateWidget(covariant LibraryBottomNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.notice != null &&
-        (widget.notice!.serial != _lastNoticeSerial ||
-            (!_expandController.isAnimating &&
-                _expandController.value == 0.0))) {
+        widget.notice!.serial != _lastNoticeSerial &&
+        widget.notice!.serial != oldWidget.notice?.serial) {
       _showNotice(widget.notice!);
     }
   }

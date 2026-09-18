@@ -117,25 +117,36 @@ void main() {
       createdAt: DateTime.now(),
       archived: true,
     );
+    late StateSetter setWidgetState;
+    LibraryNotice? currentNotice;
 
     await tester.pumpWidget(
       MaterialApp(
         theme: YankTheme.build(Brightness.dark),
-        home: Scaffold(
-          bottomNavigationBar: LibraryBottomNavigation(
-            section: LibrarySection.library,
-            yankCount: 0,
-            onSection: (_) {},
-            onCapture: () {},
-            notice: LibraryNotice(1, 'Archived.', undo: item),
-            onUndo: (i) => restoredItem = i,
-          ),
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setWidgetState = setState;
+            return Scaffold(
+              bottomNavigationBar: LibraryBottomNavigation(
+                section: LibrarySection.library,
+                yankCount: 0,
+                onSection: (_) {},
+                onCapture: () {},
+                notice: currentNotice,
+                onUndo: (i) => restoredItem = i,
+              ),
+            );
+          },
         ),
       ),
     );
-    // Initial frame triggers notice since notice is present at mount
-    await tester.pump(const Duration(milliseconds: 360));
+    await tester.pumpAndSettle();
+
+    setWidgetState(() {
+      currentNotice = LibraryNotice(1, 'Archived.', undo: item);
+    });
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 360));
 
     expect(find.text('Archived.'), findsOneWidget);
     expect(find.text('Undo'), findsOneWidget);
@@ -158,7 +169,7 @@ void main() {
       createdAt: DateTime.now(),
       archived: true,
     );
-    LibraryNotice currentNotice = LibraryNotice(1, 'Archived.', undo: item);
+    LibraryNotice? currentNotice;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -184,8 +195,13 @@ void main() {
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 360));
+    await tester.pumpAndSettle();
+
+    setWidgetState(() {
+      currentNotice = LibraryNotice(1, 'Archived.', undo: item);
+    });
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 360));
 
     // Verify initial expanded state
     expect(find.text('Archived.'), findsOneWidget);
@@ -221,29 +237,105 @@ void main() {
 
   testWidgets('pill background and foreground colors match theme in dark mode',
       (tester) async {
+    late StateSetter setWidgetState;
+    LibraryNotice? currentNotice;
+
     await tester.pumpWidget(
       MaterialApp(
         theme: YankTheme.build(Brightness.dark),
-        home: Scaffold(
-          bottomNavigationBar: LibraryBottomNavigation(
-            section: LibrarySection.library,
-            yankCount: 0,
-            onSection: (_) {},
-            onCapture: () {},
-            notice: const LibraryNotice(1, 'Kept close in Yank.'),
-          ),
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setWidgetState = setState;
+            return Scaffold(
+              bottomNavigationBar: LibraryBottomNavigation(
+                section: LibrarySection.library,
+                yankCount: 0,
+                onSection: (_) {},
+                onCapture: () {},
+                notice: currentNotice,
+              ),
+            );
+          },
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    setWidgetState(() {
+      currentNotice = const LibraryNotice(1, 'Kept close in Yank.');
+    });
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 360));
 
     final theme = YankTheme.build(Brightness.dark);
     final materialFinder = find.byWidgetPredicate(
-      (widget) => widget is Material && widget.color == theme.colorScheme.primary,
+      (widget) =>
+          widget is Material && widget.color == theme.colorScheme.primary,
     );
     expect(materialFinder, findsOneWidget);
 
     final textWidget = tester.widget<Text>(find.text('Kept close in Yank.'));
     expect(textWidget.style?.color, equals(theme.colorScheme.onPrimary));
+  });
+
+  testWidgets(
+      'switching section or updating widget does not replay already shown notice',
+      (tester) async {
+    late StateSetter setWidgetState;
+    LibraryNotice? currentNotice;
+    LibrarySection currentSection = LibrarySection.library;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setWidgetState = setState;
+            return Scaffold(
+              bottomNavigationBar: LibraryBottomNavigation(
+                section: currentSection,
+                yankCount: 1,
+                onSection: (_) {},
+                onCapture: () {},
+                notice: currentNotice,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Trigger notice once
+    setWidgetState(() {
+      currentNotice = const LibraryNotice(1, 'Kept close in Yank.');
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 360));
+    expect(find.text('Kept close in Yank.'), findsOneWidget);
+
+    // Let notice collapse after 2800ms
+    await tester.pump(const Duration(milliseconds: 2900));
+    await tester.pumpAndSettle();
+    expect(find.text('Kept close in Yank.'), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
+
+    // User switches tab to 'yank' (with the same notice still in state)
+    setWidgetState(() {
+      currentSection = LibrarySection.yank;
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 360));
+
+    // Must remain collapsed as plus button, NOT replay notice
+    expect(find.text('Kept close in Yank.'), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
+
+    // User switches filter or updates widget again
+    setWidgetState(() {});
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 360));
+    expect(find.text('Kept close in Yank.'), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
   });
 }
