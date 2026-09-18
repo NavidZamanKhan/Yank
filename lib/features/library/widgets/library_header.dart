@@ -39,18 +39,8 @@ class LibraryHeader extends StatelessWidget {
       wide ? 26 : 19,
       0,
     ),
-    child: GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onVerticalDragUpdate: (details) {
-        if (details.primaryDelta != null && details.primaryDelta! > 10.0) {
-          onSearch?.call();
-        }
-      },
-      onVerticalDragEnd: (details) {
-        if (details.primaryVelocity != null && details.primaryVelocity! > 80) {
-          onSearch?.call();
-        }
-      },
+    child: _HeaderDragDetector(
+      onSearch: onSearch,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -293,4 +283,49 @@ class _SourceChip extends StatelessWidget {
       child: Text(text, style: const TextStyle(fontSize: 12)),
     ),
   );
+}
+
+class _HeaderDragDetector extends StatefulWidget {
+  const _HeaderDragDetector({required this.onSearch, required this.child});
+  final VoidCallback? onSearch;
+  final Widget child;
+
+  @override
+  State<_HeaderDragDetector> createState() => _HeaderDragDetectorState();
+}
+
+class _HeaderDragDetectorState extends State<_HeaderDragDetector> {
+  double _distance = 0.0;
+  bool _triggered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragStart: (_) {
+        _distance = 0.0;
+        _triggered = false;
+      },
+      onVerticalDragUpdate: (details) {
+        _distance += details.primaryDelta ?? 0.0;
+        if (_distance > 20.0 && !_triggered) {
+          _triggered = true;
+          widget.onSearch?.call();
+        }
+      },
+      onVerticalDragEnd: (details) {
+        if (!_triggered && (details.primaryVelocity ?? 0.0) > 100.0) {
+          _triggered = true;
+          widget.onSearch?.call();
+        }
+        _distance = 0.0;
+        _triggered = false;
+      },
+      onVerticalDragCancel: () {
+        _distance = 0.0;
+        _triggered = false;
+      },
+      child: widget.child,
+    );
+  }
 }

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -41,6 +43,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
   bool _isForward = true;
   bool _isPullingFromTop = false;
   bool _searchTriggered = false;
+  Timer? _pointerDebounceTimer;
   final ScrollController _scrollController = ScrollController();
 
   bool _onScrollNotification(ScrollNotification notification) {
@@ -72,7 +75,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
       }
       if (_isPullingFromTop && hasDrag) {
         // On BouncingScrollPhysics, pulling down past top makes pixels negative.
-        if (notification.metrics.pixels <= -12.0 && !_searchTriggered) {
+        if (notification.metrics.pixels <= -8.0 && !_searchTriggered) {
           _searchTriggered = true;
           widget.onSearch!();
         }
@@ -82,7 +85,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
         _isPullingFromTop = false;
       }
     } else if (notification is OverscrollNotification) {
-      // On ClampingScrollPhysics, overscroll captures the pull distance
+      // On ClampingScrollPhysics, overscroll is delivered via OverscrollNotification.
       if (_isPullingFromTop && hasDrag) {
         if (notification.overscroll < -4.0 && !_searchTriggered) {
           _searchTriggered = true;
@@ -98,6 +101,22 @@ class _LibraryFeedState extends State<LibraryFeed> {
       }
     }
     return false;
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (widget.onSearch == null) return;
+    if (event is PointerScrollEvent) {
+      final isAtTop = !_scrollController.hasClients ||
+          _scrollController.offset <= 0.0;
+      if (isAtTop && event.scrollDelta.dy < -12.0 && !_searchTriggered) {
+        _searchTriggered = true;
+        widget.onSearch!();
+        _pointerDebounceTimer?.cancel();
+        _pointerDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+          if (mounted) _searchTriggered = false;
+        });
+      }
+    }
   }
 
 
@@ -266,9 +285,12 @@ class _LibraryFeedState extends State<LibraryFeed> {
       },
       child: KeyedSubtree(
         key: currentKey,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: _onScrollNotification,
-          child: content,
+        child: Listener(
+          onPointerSignal: _onPointerSignal,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: content,
+          ),
         ),
       ),
     );
@@ -276,6 +298,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
 
   @override
   void dispose() {
+    _pointerDebounceTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }

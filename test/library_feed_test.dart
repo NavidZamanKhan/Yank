@@ -570,5 +570,72 @@ void main() {
     await gesture.panZoomEnd();
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'LibraryFeed triggers onSearch when pointer scroll down occurs at top and not when scrolled',
+      (tester) async {
+    var searchTriggered = false;
+    final items = List.generate(
+      20,
+      (i) => YankItem(
+        id: 'item-$i',
+        kind: ItemKind.text,
+        title: 'Item $i',
+        createdAt: DateTime(2026, 9, 18),
+      ),
+    );
+    final state = LibraryState(items: items);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: Scaffold(
+          body: LibraryFeed(
+            state: state,
+            wide: false,
+            onOpen: (_) {},
+            onPreview: (_) {},
+            onClear: () {},
+            onCapture: () {},
+            onBrowse: () {},
+            onSearch: () => searchTriggered = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(searchTriggered, isFalse);
+
+    final location = tester.getCenter(find.byType(ListView));
+
+    // Scrolling down at top (negative scrollDelta.dy) triggers search
+    await tester.sendEventToBinding(
+      PointerScrollEvent(
+        position: location,
+        scrollDelta: const Offset(0.0, -20.0),
+      ),
+    );
+    await tester.pump();
+    expect(searchTriggered, isTrue);
+
+    // Reset and scroll down into the list
+    searchTriggered = false;
+    await tester.drag(find.byType(ListView), const Offset(0.0, -300.0));
+    await tester.pumpAndSettle();
+
+    // Scrolling when not at top should not trigger search
+    await tester.sendEventToBinding(
+      PointerScrollEvent(
+        position: location,
+        scrollDelta: const Offset(0.0, -20.0),
+      ),
+    );
+    await tester.pump();
+    expect(searchTriggered, isFalse);
+
+    // Allow debounce timer to settle
+    await tester.pump(const Duration(milliseconds: 400));
+  });
 }
 
