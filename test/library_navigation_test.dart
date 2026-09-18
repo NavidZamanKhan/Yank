@@ -146,6 +146,79 @@ void main() {
     expect(restoredItem?.id, equals('demo-1'));
   });
 
+  testWidgets(
+      'transition from undo notice to restored notice maintains expanded width without jitter',
+      (tester) async {
+    late StateSetter setWidgetState;
+    final item = YankItem(
+      id: 'demo-1',
+      title: 'Demo',
+      url: 'https://yank.test',
+      kind: ItemKind.text,
+      createdAt: DateTime.now(),
+      archived: true,
+    );
+    LibraryNotice currentNotice = LibraryNotice(1, 'Archived.', undo: item);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.dark),
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setWidgetState = setState;
+            return Scaffold(
+              bottomNavigationBar: LibraryBottomNavigation(
+                section: LibrarySection.library,
+                yankCount: 0,
+                onSection: (_) {},
+                onCapture: () {},
+                notice: currentNotice,
+                onUndo: (_) {
+                  setWidgetState(() {
+                    currentNotice = const LibraryNotice(2, 'Restored.');
+                  });
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 360));
+    await tester.pump();
+
+    // Verify initial expanded state
+    expect(find.text('Archived.'), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
+    final pillFinder = find.byWidgetPredicate(
+      (w) =>
+          w is Material &&
+          w.borderRadius == BorderRadius.circular(14.0),
+    );
+    final initialExpandedWidth = tester.getSize(pillFinder).width;
+
+    // Tap undo, triggering transition to 'Restored.'
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+
+    // Verify width immediately on next frame has NOT collapsed to 46px
+    final postUndoWidth = tester.getSize(pillFinder).width;
+    expect(postUndoWidth, equals(initialExpandedWidth));
+
+    // Advance through cross-fade transition (220ms)
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+    expect(find.text('Restored.'), findsOneWidget);
+    expect(find.text('Undo'), findsNothing);
+
+    // Advance past hold duration to verify clean collapse
+    await tester.pump(const Duration(milliseconds: 2900));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Restored.'), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
+  });
+
   testWidgets('pill background and foreground colors match theme in dark mode',
       (tester) async {
     await tester.pumpWidget(

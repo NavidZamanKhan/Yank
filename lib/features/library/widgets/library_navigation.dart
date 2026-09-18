@@ -79,11 +79,15 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
   }
 
   void _showNotice(LibraryNotice notice) {
-    _lastNoticeSerial = notice.serial;
-    _currentNotice = notice;
+    setState(() {
+      _lastNoticeSerial = notice.serial;
+      _currentNotice = notice;
+    });
     _dismissTimer?.cancel();
     HapticFeedback.lightImpact();
-    _expandController.forward(from: 0.0);
+    if (_expandController.value < 1.0) {
+      _expandController.forward();
+    }
     _dismissTimer = Timer(const Duration(milliseconds: 2800), () {
       if (mounted) {
         _collapse();
@@ -100,9 +104,10 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
 
   void _onUndo() {
     final item = _currentNotice?.undo;
-    _collapse();
     if (item != null) {
       widget.onUndo?.call(item);
+    } else {
+      _collapse();
     }
   }
 
@@ -255,60 +260,103 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                         ),
                                       ),
 
-                                      // Notification message text
+                                      // Notification message and action content
                                       if (isExpanded)
                                         Positioned(
                                           left: 40,
-                                          right: _currentNotice?.undo != null
-                                              ? 78
-                                              : 14,
-                                          child: FadeTransition(
-                                            opacity: _contentOpacity,
-                                            child: Text(
-                                              _currentNotice?.message ?? '',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: onPrimaryColor,
-                                                letterSpacing: -0.1,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                      // Optional Undo action
-                                      if (isExpanded &&
-                                          _currentNotice?.undo != null)
-                                        Positioned(
                                           right: 8,
                                           child: FadeTransition(
                                             opacity: _contentOpacity,
-                                            child: TextButton(
-                                              onPressed: _onUndo,
-                                              style: TextButton.styleFrom(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                backgroundColor: onPrimaryColor
-                                                    .withValues(alpha: 0.18),
-                                                foregroundColor: onPrimaryColor,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 11,
-                                                  vertical: 6,
-                                                ),
-                                                minimumSize: const Size(0, 30),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
+                                            child: AnimatedSwitcher(
+                                              duration: const Duration(
+                                                milliseconds: 220,
+                                              ),
+                                              switchInCurve:
+                                                  Curves.easeOutCubic,
+                                              switchOutCurve:
+                                                  Curves.easeInCubic,
+                                              transitionBuilder:
+                                                  (child, animation) =>
+                                                      FadeTransition(
+                                                opacity: animation,
+                                                child: SlideTransition(
+                                                  position: Tween<Offset>(
+                                                    begin: const Offset(
+                                                      0.06,
+                                                      0.0,
+                                                    ),
+                                                    end: Offset.zero,
+                                                  ).animate(animation),
+                                                  child: child,
                                                 ),
                                               ),
-                                              child: const Text(
-                                                'Undo',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
+                                              child: KeyedSubtree(
+                                                key: ValueKey(
+                                                  _currentNotice?.serial,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        _currentNotice?.message ??
+                                                            '',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: onPrimaryColor,
+                                                          letterSpacing: -0.1,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (_currentNotice?.undo !=
+                                                        null) ...[
+                                                      const SizedBox(width: 8),
+                                                      TextButton(
+                                                        onPressed: _onUndo,
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          visualDensity:
+                                                              VisualDensity
+                                                                  .compact,
+                                                          backgroundColor:
+                                                              onPrimaryColor
+                                                                  .withValues(
+                                                            alpha: 0.18,
+                                                          ),
+                                                          foregroundColor:
+                                                              onPrimaryColor,
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                            horizontal: 11,
+                                                            vertical: 6,
+                                                          ),
+                                                          minimumSize:
+                                                              const Size(0, 30),
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              10,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        child: const Text(
+                                                          'Undo',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
                                                 ),
                                               ),
                                             ),
