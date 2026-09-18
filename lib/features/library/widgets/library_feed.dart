@@ -134,14 +134,14 @@ class _LibraryFeedState extends State<LibraryFeed> {
     return AnimatedSwitcher(
       duration: YankMotion.duration(
         context,
-        const Duration(milliseconds: 320),
+        const Duration(milliseconds: 440),
       ),
       reverseDuration: YankMotion.duration(
         context,
-        const Duration(milliseconds: 280),
+        const Duration(milliseconds: 380),
       ),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      switchInCurve: Curves.linear,
+      switchOutCurve: Curves.linear,
       layoutBuilder: (currentChild, previousChildren) => ClipRect(
         child: Stack(
           fit: StackFit.expand,
@@ -155,19 +155,32 @@ class _LibraryFeedState extends State<LibraryFeed> {
         final isCurrent = child.key == currentKey;
         final beginOffset = _isForward
             ? (isCurrent
-                ? const Offset(0.32, 0.0)
-                : const Offset(-0.32, 0.0))
+                ? const Offset(0.28, 0.0)
+                : const Offset(-0.28, 0.0))
             : (isCurrent
-                ? const Offset(-0.32, 0.0)
-                : const Offset(0.32, 0.0));
+                ? const Offset(-0.28, 0.0)
+                : const Offset(0.28, 0.0));
+
+        final slideCurve = isCurrent ? Curves.easeOutCubic : Curves.easeInCubic;
+        final fadeInterval = isCurrent
+            ? const Interval(0.24, 1.0, curve: Curves.easeOut)
+            : const Interval(0.0, 0.60, curve: Curves.easeIn);
 
         return FadeTransition(
-          opacity: animation,
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: fadeInterval,
+          ),
           child: SlideTransition(
             position: Tween<Offset>(
               begin: beginOffset,
               end: Offset.zero,
-            ).animate(animation),
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: slideCurve,
+              ),
+            ),
             child: child,
           ),
         );

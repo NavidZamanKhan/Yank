@@ -70,7 +70,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
     _slideController = AnimationController(
       vsync: this,
       value: initialVal,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
     );
     _slideAnimation = CurvedAnimation(
       parent: _slideController,
@@ -90,7 +90,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
           target,
           duration: YankMotion.duration(
             context,
-            const Duration(milliseconds: 300),
+            const Duration(milliseconds: 400),
           ),
           curve: Curves.easeInOutCubic,
         );

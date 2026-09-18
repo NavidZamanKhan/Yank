@@ -399,14 +399,14 @@ void main() {
     await tester.tap(find.text('Yank'));
     await tester.pump();
 
-    // Mid-way through animation (150ms of 300ms)
-    await tester.pump(const Duration(milliseconds: 150));
+    // Mid-way through animation (200ms of 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
     final midRenderBox = tester.renderObject(pillFinder) as RenderBox;
     final midOffset = midRenderBox.localToGlobal(Offset.zero);
     expect(midOffset.dx, greaterThan(initialOffset.dx));
 
-    // Complete animation (total 300ms)
-    await tester.pump(const Duration(milliseconds: 150));
+    // Complete animation (total 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pump();
     final finalRenderBox = tester.renderObject(pillFinder) as RenderBox;
     final finalOffset = finalRenderBox.localToGlobal(Offset.zero);
@@ -418,15 +418,15 @@ void main() {
     await tester.tap(find.text('Library'));
     await tester.pump();
 
-    // Mid-way back (150ms)
-    await tester.pump(const Duration(milliseconds: 150));
+    // Mid-way back (200ms of 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
     final backMidRenderBox = tester.renderObject(pillFinder) as RenderBox;
     final backMidOffset = backMidRenderBox.localToGlobal(Offset.zero);
     expect(backMidOffset.dx, lessThan(finalOffset.dx));
     expect(backMidOffset.dx, greaterThan(initialOffset.dx));
 
-    // Complete slide back (total 300ms)
-    await tester.pump(const Duration(milliseconds: 150));
+    // Complete slide back (total 400ms)
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pump();
     final backFinalRenderBox = tester.renderObject(pillFinder) as RenderBox;
     final backFinalOffset = backFinalRenderBox.localToGlobal(Offset.zero);
