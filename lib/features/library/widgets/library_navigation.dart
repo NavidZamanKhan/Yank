@@ -1,70 +1,335 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion/yank_motion.dart';
 import '../../../core/theme/yank_theme.dart';
 import '../../../core/widgets/yank_controls.dart';
+import '../bloc/library_state.dart';
 import '../models/yank_item.dart';
 
-class LibraryBottomNavigation extends StatelessWidget {
+class LibraryBottomNavigation extends StatefulWidget {
   const LibraryBottomNavigation({
     super.key,
     required this.section,
     required this.yankCount,
     required this.onSection,
     required this.onCapture,
+    this.notice,
+    this.onUndo,
   });
+
   final LibrarySection section;
   final int yankCount;
   final ValueChanged<LibrarySection> onSection;
   final VoidCallback onCapture;
+  final LibraryNotice? notice;
+  final ValueChanged<YankItem>? onUndo;
+
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: context.colors.canvas,
-      border: Border(top: BorderSide(color: context.colors.line)),
-    ),
-    child: SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 10, 16, 11),
-      child: Row(
-        children: [
-          Expanded(
-            child: _Destination(
-              label: 'Library',
-              icon: LucideIcons.layers,
-              selected: section == LibrarySection.library,
-              onPressed: () => onSection(LibrarySection.library),
-            ),
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: _Destination(
-              label: 'Yank',
-              icon: LucideIcons.arrowDownLeft,
-              selected: section == LibrarySection.yank,
-              count: yankCount,
-              onPressed: () => onSection(LibrarySection.yank),
-            ),
-          ),
-          const SizedBox(width: 12),
-          PressScale(
-            child: Tooltip(
-              message: 'Add something',
-              child: SizedBox.square(
-                dimension: 46,
-                child: FilledButton(
-                  onPressed: onCapture,
-                  style: FilledButton.styleFrom(padding: EdgeInsets.zero),
-                  child: const Icon(LucideIcons.plus, size: 21),
-                ),
-              ),
-            ),
-          ),
-        ],
+  State<LibraryBottomNavigation> createState() =>
+      _LibraryBottomNavigationState();
+}
+
+class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _expandController;
+  late final Animation<double> _expandAnimation;
+  late final Animation<double> _contentOpacity;
+  Timer? _dismissTimer;
+  LibraryNotice? _currentNotice;
+  int? _lastNoticeSerial;
+
+  @override
+  void initState() {
+    super.initState();
+    _expandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+      reverseDuration: const Duration(milliseconds: 280),
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _expandController,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInOutCubic,
+    );
+    _contentOpacity = CurvedAnimation(
+      parent: _expandController,
+      curve: const Interval(0.38, 1.0, curve: Curves.easeOut),
+      reverseCurve: const Interval(0.55, 1.0, curve: Curves.easeIn),
+    );
+
+    if (widget.notice != null) {
+      _showNotice(widget.notice!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LibraryBottomNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.notice != null &&
+        (widget.notice!.serial != _lastNoticeSerial ||
+            (!_expandController.isAnimating &&
+                _expandController.value == 0.0))) {
+      _showNotice(widget.notice!);
+    }
+  }
+
+  void _showNotice(LibraryNotice notice) {
+    _lastNoticeSerial = notice.serial;
+    _currentNotice = notice;
+    _dismissTimer?.cancel();
+    HapticFeedback.lightImpact();
+    _expandController.forward(from: 0.0);
+    _dismissTimer = Timer(const Duration(milliseconds: 2800), () {
+      if (mounted) {
+        _collapse();
+      }
+    });
+  }
+
+  void _collapse() {
+    _dismissTimer?.cancel();
+    if (_expandController.value > 0.0) {
+      _expandController.reverse();
+    }
+  }
+
+  void _onUndo() {
+    final item = _currentNotice?.undo;
+    _collapse();
+    if (item != null) {
+      widget.onUndo?.call(item);
+    }
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _expandController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final onPrimaryColor = theme.colorScheme.onPrimary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.canvas,
+        border: Border(top: BorderSide(color: context.colors.line)),
       ),
-    ),
-  );
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 10, 16, 11),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            const buttonHeight = 46.0;
+            const collapsedWidth = 46.0;
+
+            return AnimatedBuilder(
+              animation: _expandAnimation,
+              builder: (context, child) {
+                final animValue = _expandAnimation.value;
+                final isExpanded = animValue > 0.0;
+                final currentWidth =
+                    collapsedWidth + (totalWidth - collapsedWidth) * animValue;
+
+                return SizedBox(
+                  height: buttonHeight,
+                  child: Stack(
+                    alignment: Alignment.centerRight,
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Navigation row underneath, fading gently during expansion
+                      Opacity(
+                        opacity: (1.0 - animValue * 1.5).clamp(0.0, 1.0),
+                        child: IgnorePointer(
+                          ignoring: isExpanded,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _Destination(
+                                  label: 'Library',
+                                  icon: LucideIcons.layers,
+                                  selected:
+                                      widget.section == LibrarySection.library,
+                                  onPressed: () => widget.onSection(
+                                    LibrarySection.library,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: _Destination(
+                                  label: 'Yank',
+                                  icon: LucideIcons.arrowDownLeft,
+                                  selected:
+                                      widget.section == LibrarySection.yank,
+                                  count: widget.yankCount,
+                                  onPressed: () => widget.onSection(
+                                    LibrarySection.yank,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const SizedBox.square(dimension: collapsedWidth),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Morphing Action / Notification Pill expanding from right to left
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SizedBox(
+                          width: currentWidth,
+                          height: buttonHeight,
+                          child: PressScale(
+                            child: Tooltip(
+                              message: isExpanded ? '' : 'Add something',
+                              child: Material(
+                                color: primaryColor,
+                                borderRadius:
+                                    BorderRadius.circular(buttonHeight / 2),
+                                elevation: isExpanded ? 2.0 : 0.0,
+                                shadowColor:
+                                    primaryColor.withValues(alpha: 0.3),
+                                child: InkWell(
+                                  onTap: () {
+                                    if (isExpanded) {
+                                      _collapse();
+                                    } else {
+                                      widget.onCapture();
+                                    }
+                                  },
+                                  borderRadius:
+                                      BorderRadius.circular(buttonHeight / 2),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // Plus icon rotating and traveling leftwards to blend in
+                                      Positioned(
+                                        left: (collapsedWidth - 21) / 2,
+                                        child: Transform.rotate(
+                                          angle: animValue * (math.pi / 2),
+                                          child: SizedBox.square(
+                                            dimension: 21,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                if (animValue < 0.8)
+                                                  Opacity(
+                                                    opacity:
+                                                        (1.0 - animValue * 1.6)
+                                                            .clamp(0.0, 1.0),
+                                                    child: Icon(
+                                                      LucideIcons.plus,
+                                                      size: 21,
+                                                      color: onPrimaryColor,
+                                                    ),
+                                                  ),
+                                                if (animValue > 0.2)
+                                                  Opacity(
+                                                    opacity:
+                                                        ((animValue - 0.25) *
+                                                                1.5)
+                                                            .clamp(0.0, 1.0),
+                                                    child: Icon(
+                                                      LucideIcons.check,
+                                                      size: 19,
+                                                      color: onPrimaryColor,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Notification message text
+                                      if (isExpanded)
+                                        Positioned(
+                                          left: 40,
+                                          right: _currentNotice?.undo != null
+                                              ? 78
+                                              : 14,
+                                          child: FadeTransition(
+                                            opacity: _contentOpacity,
+                                            child: Text(
+                                              _currentNotice?.message ?? '',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: onPrimaryColor,
+                                                letterSpacing: -0.1,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                      // Optional Undo action
+                                      if (isExpanded &&
+                                          _currentNotice?.undo != null)
+                                        Positioned(
+                                          right: 8,
+                                          child: FadeTransition(
+                                            opacity: _contentOpacity,
+                                            child: TextButton(
+                                              onPressed: _onUndo,
+                                              style: TextButton.styleFrom(
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                backgroundColor: onPrimaryColor
+                                                    .withValues(alpha: 0.18),
+                                                foregroundColor: onPrimaryColor,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 11,
+                                                  vertical: 6,
+                                                ),
+                                                minimumSize: const Size(0, 30),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Undo',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _Destination extends StatelessWidget {

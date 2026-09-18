@@ -178,19 +178,22 @@ class _LibraryPageState extends State<LibraryPage>
           if (notice == null) {
             return;
           }
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(notice.message),
-                action: notice.undo == null
-                    ? null
-                    : SnackBarAction(
-                        label: 'Undo',
-                        onPressed: () => _bloc.add(ItemRestored(notice.undo!)),
-                      ),
-              ),
-            );
+          final wide = MediaQuery.sizeOf(context).width >= 900;
+          if (wide) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(notice.message),
+                  action: notice.undo == null
+                      ? null
+                      : SnackBarAction(
+                          label: 'Undo',
+                          onPressed: () => _bloc.add(ItemRestored(notice.undo!)),
+                        ),
+                ),
+              );
+          }
         },
       ),
       BlocListener<AudioBloc, AudioState>(
@@ -344,6 +347,8 @@ class _LibraryPageState extends State<LibraryPage>
                             onSection: (section) =>
                                 _bloc.add(SectionChanged(section)),
                             onCapture: _capture,
+                            notice: state.notice,
+                            onUndo: (item) => _bloc.add(ItemRestored(item)),
                           ),
                       ],
                     );
