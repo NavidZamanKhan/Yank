@@ -134,32 +134,35 @@ class _LibraryFeedState extends State<LibraryFeed> {
     return AnimatedSwitcher(
       duration: YankMotion.duration(
         context,
+        const Duration(milliseconds: 320),
+      ),
+      reverseDuration: YankMotion.duration(
+        context,
         const Duration(milliseconds: 280),
       ),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
-      layoutBuilder: (currentChild, previousChildren) => Stack(
-        fit: StackFit.expand,
-        children: [
-          ...previousChildren,
-          ?currentChild,
-        ],
+      layoutBuilder: (currentChild, previousChildren) => ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ...previousChildren,
+            ?currentChild,
+          ],
+        ),
       ),
       transitionBuilder: (child, animation) {
         final isCurrent = child.key == currentKey;
         final beginOffset = _isForward
             ? (isCurrent
-                ? const Offset(0.28, 0.0)
-                : const Offset(-0.28, 0.0))
+                ? const Offset(0.32, 0.0)
+                : const Offset(-0.32, 0.0))
             : (isCurrent
-                ? const Offset(-0.28, 0.0)
-                : const Offset(0.28, 0.0));
+                ? const Offset(-0.32, 0.0)
+                : const Offset(0.32, 0.0));
 
         return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: isCurrent ? Curves.easeOut : Curves.easeIn,
-          ),
+          opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
               begin: beginOffset,
