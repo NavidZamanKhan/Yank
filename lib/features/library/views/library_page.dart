@@ -32,7 +32,7 @@ class _LibraryPageState extends State<LibraryPage>
   late final AnimationController _sheetAnimation = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 400),
-    reverseDuration: const Duration(milliseconds: 320),
+    reverseDuration: const Duration(milliseconds: 360),
   );
   LibraryBloc get _bloc => context.read<LibraryBloc>();
 
