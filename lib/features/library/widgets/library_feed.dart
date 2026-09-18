@@ -8,7 +8,7 @@ import '../bloc/library_bloc.dart';
 import '../models/yank_item.dart';
 import 'yank_item_card.dart';
 
-class LibraryFeed extends StatelessWidget {
+class LibraryFeed extends StatefulWidget {
   const LibraryFeed({
     super.key,
     required this.state,
@@ -19,34 +19,74 @@ class LibraryFeed extends StatelessWidget {
     required this.onCapture,
     required this.onBrowse,
   });
+
   final LibraryState state;
   final bool wide;
   final ValueChanged<YankItem> onOpen, onPreview;
   final VoidCallback onClear, onCapture, onBrowse;
+
+  @override
+  State<LibraryFeed> createState() => _LibraryFeedState();
+}
+
+class _LibraryFeedState extends State<LibraryFeed> {
+  late LibrarySection _lastSection;
+  ItemKind? _lastKind;
+  bool _isForward = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSection = widget.state.section;
+    _lastKind = widget.state.kind;
+  }
+
+  @override
+  void didUpdateWidget(covariant LibraryFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.state.section != _lastSection) {
+      _isForward = widget.state.section.index >= _lastSection.index;
+      _lastSection = widget.state.section;
+      _lastKind = widget.state.kind;
+    } else if (widget.state.kind != _lastKind) {
+      _isForward = _kindIndex(widget.state.kind) >= _kindIndex(_lastKind);
+      _lastKind = widget.state.kind;
+    }
+  }
+
+  static int _kindIndex(ItemKind? kind) => switch (kind) {
+    null => 0,
+    ItemKind.link => 1,
+    ItemKind.photo => 2,
+    ItemKind.audio => 3,
+    ItemKind.file => 4,
+    ItemKind.text => 5,
+  };
+
   @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final items = state.visible;
     final filterKey =
-        '${state.section.name}-${state.kind?.name}-${state.source}';
-    final isYank = state.section == LibrarySection.yank;
+        '${state.section.name}-${state.kind?.name}-${state.source}-${state.query}';
+    final currentKey = ValueKey(filterKey);
 
     final Widget content;
     if (items.isEmpty) {
-      content = KeyedSubtree(
-        key: PageStorageKey('empty-$filterKey'),
-        child: _EmptyLibrary(
-          state: state,
-          onClear: onClear,
-          onCapture: onCapture,
-          onBrowse: onBrowse,
-        ),
+      content = _EmptyLibrary(
+        state: state,
+        onClear: widget.onClear,
+        onCapture: widget.onCapture,
+        onBrowse: widget.onBrowse,
       );
     } else {
       final entries = <Object>[];
       String? previous;
       for (final item in items) {
         final label = dayLabel(
-          state.section == LibrarySection.yank ? item.yankedAt! : item.createdAt,
+          state.section == LibrarySection.yank
+              ? item.yankedAt!
+              : item.createdAt,
         );
         if (state.query.isEmpty && label != previous) {
           entries.add(label);
@@ -57,7 +97,12 @@ class LibraryFeed extends StatelessWidget {
       content = ListView.builder(
         key: PageStorageKey(filterKey),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(wide ? 24 : 15, 12, wide ? 24 : 15, 24),
+        padding: EdgeInsets.fromLTRB(
+          widget.wide ? 24 : 15,
+          12,
+          widget.wide ? 24 : 15,
+          24,
+        ),
         itemCount: entries.length,
         itemBuilder: (context, index) {
           final entry = entries[index];
@@ -78,8 +123,8 @@ class LibraryFeed extends StatelessWidget {
             child: YankItemCard(
               item: item,
               availability: state.availability(item.id),
-              onOpen: () => onOpen(item),
-              onPreview: () => onPreview(item),
+              onOpen: () => widget.onOpen(item),
+              onPreview: () => widget.onPreview(item),
             ),
           );
         },
@@ -89,21 +134,45 @@ class LibraryFeed extends StatelessWidget {
     return AnimatedSwitcher(
       duration: YankMotion.duration(
         context,
-        const Duration(milliseconds: 260),
+        const Duration(milliseconds: 280),
       ),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: isYank ? const Offset(0.06, 0.0) : const Offset(-0.06, 0.0),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
-        ),
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        children: [
+          ...previousChildren,
+          ?currentChild,
+        ],
       ),
-      child: content,
+      transitionBuilder: (child, animation) {
+        final isCurrent = child.key == currentKey;
+        final beginOffset = _isForward
+            ? (isCurrent
+                ? const Offset(0.28, 0.0)
+                : const Offset(-0.28, 0.0))
+            : (isCurrent
+                ? const Offset(-0.28, 0.0)
+                : const Offset(0.28, 0.0));
+
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: isCurrent ? Curves.easeOut : Curves.easeIn,
+          ),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: beginOffset,
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: currentKey,
+        child: content,
+      ),
     );
   }
 }
