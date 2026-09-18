@@ -35,10 +35,14 @@ class LibraryBottomNavigation extends StatefulWidget {
 }
 
 class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _expandController;
   late final Animation<double> _expandAnimation;
   late final Animation<double> _contentOpacity;
+
+  late final AnimationController _slideController;
+  late final Animation<double> _slideAnimation;
+
   Timer? _dismissTimer;
   LibraryNotice? _currentNotice;
   int? _lastNoticeSerial;
@@ -62,12 +66,36 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
       reverseCurve: const Interval(0.55, 1.0, curve: Curves.easeIn),
     );
 
+    final initialVal = widget.section == LibrarySection.yank ? 1.0 : 0.0;
+    _slideController = AnimationController(
+      vsync: this,
+      value: initialVal,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slideAnimation = CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeInOutCubic,
+    );
+
     _lastNoticeSerial = widget.notice?.serial;
   }
 
   @override
   void didUpdateWidget(covariant LibraryBottomNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.section != oldWidget.section) {
+      final target = widget.section == LibrarySection.yank ? 1.0 : 0.0;
+      if (_slideController.value != target) {
+        _slideController.animateTo(
+          target,
+          duration: YankMotion.duration(
+            context,
+            const Duration(milliseconds: 300),
+          ),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    }
     if (widget.notice != null &&
         widget.notice!.serial != _lastNoticeSerial &&
         widget.notice!.serial != oldWidget.notice?.serial) {
@@ -112,6 +140,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
   void dispose() {
     _dismissTimer?.cancel();
     _expandController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
@@ -148,12 +177,29 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                 widget.section == LibrarySection.yank;
 
             return AnimatedBuilder(
-              animation: _expandAnimation,
+              animation: Listenable.merge([_expandAnimation, _slideAnimation]),
               builder: (context, child) {
                 final animValue = _expandAnimation.value;
                 final isExpanded = animValue > 0.0;
                 final currentWidth =
                     collapsedWidth + (totalWidth - collapsedWidth) * animValue;
+
+                final slideVal = _slideAnimation.value;
+                final targetOffset = buttonWidth + tabsGap;
+                final stretch = math.sin(slideVal * math.pi) * 8.0;
+                final pillLeft = targetOffset * slideVal - (stretch / 2.0);
+                final pillWidth = buttonWidth + stretch;
+
+                final libraryColor = Color.lerp(
+                  context.colors.iris,
+                  context.colors.muted,
+                  slideVal,
+                )!;
+                final yankColor = Color.lerp(
+                  context.colors.muted,
+                  context.colors.iris,
+                  slideVal,
+                )!;
 
                 return SizedBox(
                   height: buttonHeight,
@@ -174,34 +220,28 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
-                                    // Sliding active destination indicator pill
-                                    AnimatedPositioned(
-                                      key: const Key(
-                                        'library_nav_indicator_pill',
-                                      ),
-                                      duration: YankMotion.duration(
-                                        context,
-                                        const Duration(milliseconds: 260),
-                                      ),
-                                      curve: Curves.easeOutCubic,
-                                      left: widget.section ==
-                                              LibrarySection.yank
-                                          ? buttonWidth + tabsGap
-                                          : 0.0,
+                                    // Sliding active destination indicator pill with elastic transit stretch
+                                    Positioned(
+                                      left: pillLeft,
                                       top: 0.0,
-                                      width: buttonWidth,
-                                      height: buttonHeight,
                                       child: AnimatedOpacity(
                                         duration: YankMotion.duration(
                                           context,
                                           const Duration(milliseconds: 200),
                                         ),
                                         opacity: isNavSection ? 1.0 : 0.0,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: context.colors.tint,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          key: const Key(
+                                            'library_nav_indicator_pill',
+                                          ),
+                                          width: pillWidth,
+                                          height: buttonHeight,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: context.colors.tint,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -216,6 +256,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                             icon: LucideIcons.layers,
                                             selected: widget.section ==
                                                 LibrarySection.library,
+                                            color: libraryColor,
                                             highlightBackground: false,
                                             onPressed: () => widget.onSection(
                                               LibrarySection.library,
@@ -232,6 +273,7 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                             selected: widget.section ==
                                                 LibrarySection.yank,
                                             count: widget.yankCount,
+                                            color: yankColor,
                                             highlightBackground: false,
                                             onPressed: () => widget.onSection(
                                               LibrarySection.yank,
@@ -448,6 +490,7 @@ class _Destination extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     this.count,
+    this.color,
     this.highlightBackground = true,
   });
 
@@ -456,35 +499,34 @@ class _Destination extends StatelessWidget {
   final bool selected;
   final VoidCallback onPressed;
   final int? count;
+  final Color? color;
   final bool highlightBackground;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    selected: selected,
-    child: TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(44, 46),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        backgroundColor: (selected && highlightBackground)
-            ? context.colors.tint
-            : Colors.transparent,
-        foregroundColor: selected ? context.colors.iris : context.colors.muted,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: TweenAnimationBuilder<Color?>(
-        duration: YankMotion.duration(
-          context,
-          const Duration(milliseconds: 200),
+  Widget build(BuildContext context) {
+    final effectiveColor =
+        color ?? (selected ? context.colors.iris : context.colors.muted);
+    return Semantics(
+      selected: selected,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 46),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          backgroundColor: (selected && highlightBackground)
+              ? context.colors.tint
+              : Colors.transparent,
+          foregroundColor: effectiveColor,
+          splashFactory: highlightBackground ? null : NoSplash.splashFactory,
+          overlayColor: highlightBackground ? null : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-        curve: Curves.easeOut,
-        tween: ColorTween(
-          end: selected ? context.colors.iris : context.colors.muted,
-        ),
-        builder: (context, color, _) => Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: color),
+            Icon(icon, size: 18, color: effectiveColor),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -494,7 +536,7 @@ class _Destination extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: color,
+                  color: effectiveColor,
                 ),
               ),
             ),
@@ -508,8 +550,8 @@ class _Destination extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class LibrarySidebar extends StatelessWidget {

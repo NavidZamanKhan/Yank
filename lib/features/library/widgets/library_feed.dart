@@ -26,33 +26,35 @@ class LibraryFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = state.visible;
-    if (items.isEmpty) {
-      return _EmptyLibrary(
-        state: state,
-        onClear: onClear,
-        onCapture: onCapture,
-        onBrowse: onBrowse,
-      );
-    }
-    final entries = <Object>[];
-    String? previous;
-    for (final item in items) {
-      final label = dayLabel(
-        state.section == LibrarySection.yank ? item.yankedAt! : item.createdAt,
-      );
-      if (state.query.isEmpty && label != previous) {
-        entries.add(label);
-        previous = label;
-      }
-      entries.add(item);
-    }
     final filterKey =
         '${state.section.name}-${state.kind?.name}-${state.source}';
-    return AnimatedSwitcher(
-      duration: YankMotion.duration(context, YankMotion.quick),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      child: ListView.builder(
+    final isYank = state.section == LibrarySection.yank;
+
+    final Widget content;
+    if (items.isEmpty) {
+      content = KeyedSubtree(
+        key: PageStorageKey('empty-$filterKey'),
+        child: _EmptyLibrary(
+          state: state,
+          onClear: onClear,
+          onCapture: onCapture,
+          onBrowse: onBrowse,
+        ),
+      );
+    } else {
+      final entries = <Object>[];
+      String? previous;
+      for (final item in items) {
+        final label = dayLabel(
+          state.section == LibrarySection.yank ? item.yankedAt! : item.createdAt,
+        );
+        if (state.query.isEmpty && label != previous) {
+          entries.add(label);
+          previous = label;
+        }
+        entries.add(item);
+      }
+      content = ListView.builder(
         key: PageStorageKey(filterKey),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: EdgeInsets.fromLTRB(wide ? 24 : 15, 12, wide ? 24 : 15, 24),
@@ -81,7 +83,27 @@ class LibraryFeed extends StatelessWidget {
             ),
           );
         },
+      );
+    }
+
+    return AnimatedSwitcher(
+      duration: YankMotion.duration(
+        context,
+        const Duration(milliseconds: 260),
       ),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: isYank ? const Offset(0.06, 0.0) : const Offset(-0.06, 0.0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: content,
     );
   }
 }
