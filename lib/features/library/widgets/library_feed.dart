@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion/yank_motion.dart';
@@ -45,6 +46,8 @@ class _LibraryFeedState extends State<LibraryFeed> {
   bool _onScrollNotification(ScrollNotification notification) {
     if (widget.onSearch == null) return false;
 
+    if (notification.metrics.axis != Axis.vertical) return false;
+
     final hasDrag = switch (notification) {
       ScrollStartNotification s => s.dragDetails != null,
       ScrollUpdateNotification u => u.dragDetails != null,
@@ -53,30 +56,35 @@ class _LibraryFeedState extends State<LibraryFeed> {
     };
 
     if (notification is ScrollStartNotification) {
-      // Exactly like RefreshIndicator: only start pull-to-search if the user
-      // initiates the drag while resting at the top boundary (extentBefore <= 0.0).
-      if (hasDrag && notification.metrics.extentBefore <= 0.0) {
+      // Only initiate pull-to-search when the user begins dragging while
+      // the scrollable list is resting at the top boundary.
+      if (hasDrag &&
+          notification.metrics.extentBefore <= 0.0 &&
+          notification.metrics.pixels <= 0.0) {
         _isPullingFromTop = true;
         _searchTriggered = false;
       } else {
         _isPullingFromTop = false;
       }
     } else if (notification is ScrollUpdateNotification) {
+      if (notification.metrics.pixels > 0.0) {
+        _isPullingFromTop = false;
+      }
       if (_isPullingFromTop && hasDrag) {
-        // On BouncingScrollPhysics, pulling down past the top makes pixels negative.
-        if (notification.metrics.pixels <= -18.0 && !_searchTriggered) {
+        // On BouncingScrollPhysics, pulling down past top makes pixels negative.
+        if (notification.metrics.pixels <= -12.0 && !_searchTriggered) {
           _searchTriggered = true;
           widget.onSearch!();
         }
       }
-      // If the drag ended and scroll returned to normal range, clear the pulling flag
+      // If drag ended and scroll returned to normal range, clear the pulling flag
       if (!hasDrag && notification.metrics.pixels >= 0.0) {
         _isPullingFromTop = false;
       }
     } else if (notification is OverscrollNotification) {
       // On ClampingScrollPhysics, overscroll captures the pull distance
       if (_isPullingFromTop && hasDrag) {
-        if (notification.overscroll < -10.0 && !_searchTriggered) {
+        if (notification.overscroll < -4.0 && !_searchTriggered) {
           _searchTriggered = true;
           widget.onSearch!();
         }
@@ -91,6 +99,7 @@ class _LibraryFeedState extends State<LibraryFeed> {
     }
     return false;
   }
+
 
   @override
   void initState() {
