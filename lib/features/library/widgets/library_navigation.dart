@@ -135,6 +135,17 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
             const buttonHeight = 46.0;
             const collapsedWidth = 46.0;
             const squircleRadius = 14.0;
+            const tabsGap = 7.0;
+            const plusGap = 12.0;
+
+            final navWidth = math.max(
+              0.0,
+              totalWidth - collapsedWidth - plusGap,
+            );
+            final buttonWidth = math.max(0.0, (navWidth - tabsGap) / 2.0);
+            final isNavSection =
+                widget.section == LibrarySection.library ||
+                widget.section == LibrarySection.yank;
 
             return AnimatedBuilder(
               animation: _expandAnimation,
@@ -157,31 +168,82 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                           ignoring: isExpanded,
                           child: Row(
                             children: [
-                              Expanded(
-                                child: _Destination(
-                                  label: 'Library',
-                                  icon: LucideIcons.layers,
-                                  selected:
-                                      widget.section == LibrarySection.library,
-                                  onPressed: () => widget.onSection(
-                                    LibrarySection.library,
-                                  ),
+                              SizedBox(
+                                width: navWidth,
+                                height: buttonHeight,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    // Sliding active destination indicator pill
+                                    AnimatedPositioned(
+                                      key: const Key(
+                                        'library_nav_indicator_pill',
+                                      ),
+                                      duration: YankMotion.duration(
+                                        context,
+                                        const Duration(milliseconds: 260),
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                      left: widget.section ==
+                                              LibrarySection.yank
+                                          ? buttonWidth + tabsGap
+                                          : 0.0,
+                                      top: 0.0,
+                                      width: buttonWidth,
+                                      height: buttonHeight,
+                                      child: AnimatedOpacity(
+                                        duration: YankMotion.duration(
+                                          context,
+                                          const Duration(milliseconds: 200),
+                                        ),
+                                        opacity: isNavSection ? 1.0 : 0.0,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: context.colors.tint,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        SizedBox(
+                                          width: buttonWidth,
+                                          height: buttonHeight,
+                                          child: _Destination(
+                                            label: 'Library',
+                                            icon: LucideIcons.layers,
+                                            selected: widget.section ==
+                                                LibrarySection.library,
+                                            highlightBackground: false,
+                                            onPressed: () => widget.onSection(
+                                              LibrarySection.library,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: tabsGap),
+                                        SizedBox(
+                                          width: buttonWidth,
+                                          height: buttonHeight,
+                                          child: _Destination(
+                                            label: 'Yank',
+                                            icon: LucideIcons.arrowDownLeft,
+                                            selected: widget.section ==
+                                                LibrarySection.yank,
+                                            count: widget.yankCount,
+                                            highlightBackground: false,
+                                            onPressed: () => widget.onSection(
+                                              LibrarySection.yank,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 7),
-                              Expanded(
-                                child: _Destination(
-                                  label: 'Yank',
-                                  icon: LucideIcons.arrowDownLeft,
-                                  selected:
-                                      widget.section == LibrarySection.yank,
-                                  count: widget.yankCount,
-                                  onPressed: () => widget.onSection(
-                                    LibrarySection.yank,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: plusGap),
                               const SizedBox.square(dimension: collapsedWidth),
                             ],
                           ),
@@ -386,12 +448,16 @@ class _Destination extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     this.count,
+    this.highlightBackground = true,
   });
+
   final String label;
   final IconData icon;
   final bool selected;
   final VoidCallback onPressed;
   final int? count;
+  final bool highlightBackground;
+
   @override
   Widget build(BuildContext context) => Semantics(
     selected: selected,
@@ -400,31 +466,47 @@ class _Destination extends StatelessWidget {
       style: TextButton.styleFrom(
         minimumSize: const Size(44, 46),
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        backgroundColor: selected ? context.colors.tint : Colors.transparent,
+        backgroundColor: (selected && highlightBackground)
+            ? context.colors.tint
+            : Colors.transparent,
         foregroundColor: selected ? context.colors.iris : context.colors.muted,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      child: TweenAnimationBuilder<Color?>(
+        duration: YankMotion.duration(
+          context,
+          const Duration(milliseconds: 200),
+        ),
+        curve: Curves.easeOut,
+        tween: ColorTween(
+          end: selected ? context.colors.iris : context.colors.muted,
+        ),
+        builder: (context, color, _) => Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
             ),
-          ),
-          if (count != null && count! > 0) ...[
-            const SizedBox(width: 7),
-            Text(
-              '$count',
-              style: TextStyle(fontSize: 11, color: context.colors.muted),
-            ),
+            if (count != null && count! > 0) ...[
+              const SizedBox(width: 7),
+              Text(
+                '$count',
+                style: TextStyle(fontSize: 11, color: context.colors.muted),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );

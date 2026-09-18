@@ -338,4 +338,107 @@ void main() {
     expect(find.text('Kept close in Yank.'), findsNothing);
     expect(find.byIcon(LucideIcons.plus), findsOneWidget);
   });
+
+  testWidgets(
+      'indicator pill slides smoothly between library and yank navigation destinations',
+      (tester) async {
+    late StateSetter setWidgetState;
+    LibrarySection currentSection = LibrarySection.library;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: YankTheme.build(Brightness.light),
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setWidgetState = setState;
+            return Scaffold(
+              bottomNavigationBar: LibraryBottomNavigation(
+                section: currentSection,
+                yankCount: 3,
+                onSection: (s) {
+                  setWidgetState(() {
+                    currentSection = s;
+                  });
+                },
+                onCapture: () {},
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pillFinder = find.byKey(const Key('library_nav_indicator_pill'));
+    expect(pillFinder, findsOneWidget);
+
+    // Initial position on Library: left is 0.0
+    final initialWidget = tester.widget<AnimatedPositioned>(pillFinder);
+    expect(initialWidget.left, equals(0.0));
+    final initialRenderBox = tester.renderObject(pillFinder) as RenderBox;
+    final initialOffset = initialRenderBox.localToGlobal(Offset.zero);
+
+    // Verify indicator decoration has squircle BorderRadius.circular(12)
+    final decoratedBoxFinder = find.descendant(
+      of: pillFinder,
+      matching: find.byType(DecoratedBox),
+    );
+    expect(decoratedBoxFinder, findsOneWidget);
+    final decoratedBox = tester.widget<DecoratedBox>(decoratedBoxFinder);
+    final boxDecoration = decoratedBox.decoration as BoxDecoration;
+    expect(boxDecoration.borderRadius, equals(BorderRadius.circular(12)));
+
+    // Verify destinations have transparent background to let the pill show through
+    final destTextButtons = tester.widgetList<TextButton>(find.byType(TextButton));
+    for (final btn in destTextButtons) {
+      expect(
+        btn.style?.backgroundColor?.resolve({}),
+        equals(Colors.transparent),
+      );
+    }
+
+    // Switch section to Yank
+    await tester.tap(find.text('Yank'));
+    await tester.pump();
+
+    // After state update, AnimatedPositioned target left is greater than 0
+    final yankWidget = tester.widget<AnimatedPositioned>(pillFinder);
+    expect(yankWidget.left, greaterThan(0.0));
+    final targetLeft = yankWidget.left!;
+
+    // Mid-way through animation (130ms)
+    await tester.pump(const Duration(milliseconds: 130));
+    final midRenderBox = tester.renderObject(pillFinder) as RenderBox;
+    final midOffset = midRenderBox.localToGlobal(Offset.zero);
+    expect(midOffset.dx, greaterThan(initialOffset.dx));
+    expect(midOffset.dx, lessThan(initialOffset.dx + targetLeft));
+
+    // Complete animation (total 260ms)
+    await tester.pump(const Duration(milliseconds: 130));
+    await tester.pump();
+    final finalRenderBox = tester.renderObject(pillFinder) as RenderBox;
+    final finalOffset = finalRenderBox.localToGlobal(Offset.zero);
+    expect(finalOffset.dx, closeTo(initialOffset.dx + targetLeft, 0.5));
+
+    // Now tap Library to slide back
+    await tester.tap(find.text('Library'));
+    await tester.pump();
+
+    final libWidget = tester.widget<AnimatedPositioned>(pillFinder);
+    expect(libWidget.left, equals(0.0));
+
+    // Mid-way back (130ms)
+    await tester.pump(const Duration(milliseconds: 130));
+    final backMidRenderBox = tester.renderObject(pillFinder) as RenderBox;
+    final backMidOffset = backMidRenderBox.localToGlobal(Offset.zero);
+    expect(backMidOffset.dx, lessThan(finalOffset.dx));
+    expect(backMidOffset.dx, greaterThan(initialOffset.dx));
+
+    // Complete slide back
+    await tester.pump(const Duration(milliseconds: 130));
+    await tester.pump();
+    final backFinalRenderBox = tester.renderObject(pillFinder) as RenderBox;
+    final backFinalOffset = backFinalRenderBox.localToGlobal(Offset.zero);
+    expect(backFinalOffset.dx, closeTo(initialOffset.dx, 0.5));
+  });
 }
