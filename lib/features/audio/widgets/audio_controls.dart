@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion/yank_motion.dart';
 import '../../../core/theme/yank_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../library/models/yank_item.dart';
@@ -210,52 +211,152 @@ class _WaveformPainter extends CustomPainter {
       old.inactive != inactive;
 }
 
-class MiniPlayer extends StatelessWidget {
+class MiniPlayer extends StatefulWidget {
   const MiniPlayer({super.key});
+
   @override
-  Widget build(BuildContext context) => BlocBuilder<AudioBloc, AudioState>(
-    buildWhen: (a, b) =>
-        a.item != b.item || a.playing != b.playing || a.loading != b.loading,
-    builder: (context, state) {
-      final item = state.item;
-      if (item == null) {
-        return const SizedBox.shrink();
-      }
-      return Container(
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          border: Border(top: BorderSide(color: context.colors.line)),
-        ),
-        padding: const EdgeInsets.only(left: 16, right: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+  State<MiniPlayer> createState() => _MiniPlayerState();
+}
+
+class _MiniPlayerState extends State<MiniPlayer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _curved;
+  YankItem? _displayItem;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: YankMotion.panel,
+      reverseDuration: YankMotion.settle,
+    );
+    _curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInOutCubic,
+    );
+    final initialItem = context.read<AudioBloc>().state.item;
+    if (initialItem != null) {
+      _displayItem = initialItem;
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<AudioBloc, AudioState>(
+      listenWhen: (prev, curr) => prev.item != curr.item,
+      listener: (context, state) {
+        final forwardDur = YankMotion.duration(context, YankMotion.panel);
+        final reverseDur = YankMotion.duration(context, YankMotion.settle);
+        _controller.duration = forwardDur;
+        _controller.reverseDuration = reverseDur;
+        if (state.item != null) {
+          setState(() => _displayItem = state.item);
+          _controller.forward();
+        } else {
+          _controller.reverse();
+        }
+      },
+      buildWhen: (prev, curr) =>
+          prev.item != curr.item ||
+          prev.playing != curr.playing ||
+          prev.loading != curr.loading,
+      builder: (context, state) {
+        if (state.item != null && _displayItem != state.item) {
+          _displayItem = state.item;
+          if (_controller.value == 0.0) {
+            final forwardDur = YankMotion.duration(context, YankMotion.panel);
+            _controller.duration = forwardDur;
+            _controller.forward();
+          }
+        }
+
+        final item = state.item ?? _displayItem;
+        if (item == null) {
+          return const SizedBox.shrink();
+        }
+
+        return AnimatedBuilder(
+          animation: _curved,
+          builder: (context, _) {
+            if (_controller.value == 0.0 && state.item == null) {
+              return const SizedBox.shrink();
+            }
+            return ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: _curved.value,
+                child: Opacity(
+                  opacity: _curved.value.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(0.0, (1.0 - _curved.value) * 16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.colors.surface,
+                        border: Border(
+                          top: BorderSide(color: context.colors.line),
+                        ),
+                      ),
+                      padding: const EdgeInsets.only(left: 16, right: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: YankMotion.duration(
+                                context,
+                                YankMotion.quick,
+                              ),
+                              child: Text(
+                                item.title,
+                                key: ValueKey(item.id),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: state.loading
+                                ? null
+                                : () => context
+                                    .read<AudioBloc>()
+                                    .add(AudioTapped(item)),
+                            tooltip: state.playing
+                                ? 'Pause audio'
+                                : 'Play audio',
+                            icon: Icon(
+                              state.playing
+                                  ? LucideIcons.pause
+                                  : LucideIcons.play,
+                              size: 17,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => context
+                                .read<AudioBloc>()
+                                .add(const AudioStopped()),
+                            tooltip: 'Close player',
+                            icon: const Icon(LucideIcons.x, size: 17),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            IconButton(
-              onPressed: state.loading
-                  ? null
-                  : () => context.read<AudioBloc>().add(AudioTapped(item)),
-              tooltip: state.playing ? 'Pause audio' : 'Play audio',
-              icon: Icon(
-                state.playing ? LucideIcons.pause : LucideIcons.play,
-                size: 17,
-              ),
-            ),
-            IconButton(
-              onPressed: () =>
-                  context.read<AudioBloc>().add(const AudioStopped()),
-              tooltip: 'Close player',
-              icon: const Icon(LucideIcons.x, size: 17),
-            ),
-          ],
-        ),
-      );
-    },
-  );
+            );
+          },
+        );
+      },
+    );
+  }
 }
