@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
 import 'package:yank/features/capture/bloc/capture_bloc.dart';
 import 'package:yank/features/capture/views/capture_sheet.dart';
 import 'package:yank/features/library/repositories/demo_library_repository.dart';
@@ -69,9 +70,17 @@ void main() {
       await tester.tap(find.text('Open Sheet'));
       await tester.pumpAndSettle();
 
+      // Check category chips have their kind icons
+      expect(find.byIcon(LucideIcons.link), findsOneWidget);
+      expect(find.byIcon(LucideIcons.images), findsAtLeastNWidgets(1));
+      expect(find.byIcon(LucideIcons.music), findsAtLeastNWidgets(1));
+      expect(find.byIcon(LucideIcons.fileText), findsAtLeastNWidgets(1));
+      expect(find.byIcon(LucideIcons.type), findsOneWidget);
+
       // Default kind is Link
       expect(find.text('Paste a link...'), findsOneWidget);
       expect(find.text('Paste from clipboard'), findsOneWidget);
+      expect(find.byType(YankButton), findsWidgets);
 
       // Switch to Text
       await tester.tap(find.text('Text'));
@@ -85,6 +94,8 @@ void main() {
       expect(find.text('Add an image to your library'), findsOneWidget);
       expect(find.text('Photos'), findsOneWidget);
       expect(find.text('Camera'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.image), findsOneWidget);
+      expect(find.byIcon(LucideIcons.camera), findsOneWidget);
 
       // Switch to Audio
       await tester.tap(find.text('Audio'));
@@ -102,6 +113,83 @@ void main() {
 
       // Verify Add to library button is present
       expect(find.text('Add to library'), findsOneWidget);
+    });
+
+    testWidgets('YankButton triggers callback and handles loading state', (
+      tester,
+    ) async {
+      var pressed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: YankTheme.build(Brightness.light),
+          home: Scaffold(
+            body: Center(
+              child: YankButton(
+                label: 'Save item',
+                icon: LucideIcons.plus,
+                onPressed: () => pressed = true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save item'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.plus), findsOneWidget);
+
+      await tester.tap(find.text('Save item'));
+      await tester.pumpAndSettle();
+      expect(pressed, isTrue);
+
+      // Test loading state disables tap and shows indicator
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: YankTheme.build(Brightness.light),
+          home: Scaffold(
+            body: Center(
+              child: YankButton(
+                label: 'Save item',
+                loading: true,
+                onPressed: () => pressed = false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Saving...'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('YankButton renders secondary and subtle variants correctly', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: YankTheme.build(Brightness.light),
+          home: const Scaffold(
+            body: Column(
+              children: [
+                YankButton.secondary(
+                  label: 'Photos',
+                  icon: LucideIcons.image,
+                ),
+                YankButton.subtle(
+                  label: 'Paste from clipboard',
+                  icon: LucideIcons.clipboard,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Photos'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.image), findsOneWidget);
+      expect(find.text('Paste from clipboard'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.clipboard), findsOneWidget);
     });
   });
 }

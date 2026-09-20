@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:yank/core/motion/yank_motion.dart';
@@ -48,6 +49,175 @@ class YankToggle extends StatelessWidget {
   );
 }
 
+enum YankButtonVariant {
+  primary,
+  secondary,
+  subtle,
+}
+
+class YankButton extends StatelessWidget {
+  const YankButton({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.variant = YankButtonVariant.primary,
+    this.loading = false,
+    this.fullWidth = false,
+    this.height = 48,
+    this.padding,
+  });
+
+  const YankButton.secondary({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.loading = false,
+    this.fullWidth = false,
+    this.height = 48,
+    this.padding,
+  }) : variant = YankButtonVariant.secondary;
+
+  const YankButton.subtle({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.loading = false,
+    this.fullWidth = false,
+    this.height = 38,
+    this.padding,
+  }) : variant = YankButtonVariant.subtle;
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final YankButtonVariant variant;
+  final bool loading;
+  final bool fullWidth;
+  final double height;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !loading;
+
+    final (Color background, Color foreground, BorderSide? border) =
+        switch (variant) {
+      YankButtonVariant.primary => (
+          enabled
+              ? context.colors.iris
+              : context.colors.muted.withValues(alpha: 0.35),
+          Theme.of(context).brightness == Brightness.dark
+              ? context.colors.canvas
+              : Colors.white,
+          null,
+        ),
+      YankButtonVariant.secondary => (
+          context.colors.surface,
+          enabled ? context.colors.ink : context.colors.muted,
+          BorderSide(color: context.colors.line, width: 1.2),
+        ),
+      YankButtonVariant.subtle => (
+          Colors.transparent,
+          enabled ? context.colors.iris : context.colors.muted,
+          null,
+        ),
+    };
+
+    final content = Row(
+      mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (loading) ...[
+          SizedBox.square(
+            dimension: 17,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(foreground),
+            ),
+          ),
+          const SizedBox(width: 9),
+          Flexible(
+            child: Text(
+              'Saving...',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: foreground,
+              ),
+            ),
+          ),
+        ] else ...[
+          if (icon != null) ...[
+            Icon(icon, size: 17, color: foreground),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: foreground,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    final buttonBox = AnimatedContainer(
+      duration: YankMotion.quick,
+      height: height,
+      padding: padding ??
+          (variant == YankButtonVariant.subtle
+              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+              : const EdgeInsets.symmetric(horizontal: 16)),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(13),
+        border: border != null ? Border.fromBorderSide(border) : null,
+        boxShadow: variant == YankButtonVariant.primary && enabled
+            ? [
+                BoxShadow(
+                  color: context.colors.iris.withValues(alpha: 0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: content,
+    );
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: PressScale(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled
+              ? () {
+                  HapticFeedback.lightImpact();
+                  onPressed?.call();
+                }
+              : null,
+          child: fullWidth
+              ? SizedBox(width: double.infinity, child: buttonBox)
+              : buttonBox,
+        ),
+      ),
+    );
+  }
+}
+
 class SheetHeading extends StatelessWidget {
   const SheetHeading({
     super.key,
@@ -76,10 +246,12 @@ class SheetHeading extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          onPressed: onClose ?? () => Navigator.pop(context),
-          tooltip: 'Close',
-          icon: const Icon(LucideIcons.x),
+        PressScale(
+          child: IconButton(
+            onPressed: onClose ?? () => Navigator.pop(context),
+            tooltip: 'Close',
+            icon: const Icon(LucideIcons.x),
+          ),
         ),
       ],
     ),

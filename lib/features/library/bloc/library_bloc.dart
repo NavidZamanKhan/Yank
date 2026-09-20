@@ -62,6 +62,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           emit(state.copyWith(query: query));
         case PreviewSelected(:final id):
           emit(state.copyWith(selectedId: id));
+        case NoticePosted(:final message, :final undo):
+          emit(state.copyWith(notice: _notice(message, undo: undo)));
         case ItemYankToggled(:final id):
           final item = _current(id);
           if (item == null) {

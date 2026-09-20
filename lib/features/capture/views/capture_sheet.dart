@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:yank/core/motion/yank_motion.dart';
 import 'package:yank/core/theme/yank_theme.dart';
 import 'package:yank/core/widgets/yank_controls.dart';
 import 'package:yank/core/widgets/yank_feedback.dart';
@@ -184,6 +185,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
         listenWhen: (old, next) => !old.saved && next.saved,
         listener: (context, state) {
           HapticFeedback.lightImpact();
+          FocusScope.of(context).unfocus();
           Navigator.pop(context, true);
         },
         builder: (context, state) {
@@ -211,44 +213,67 @@ class _CaptureSheetState extends State<CaptureSheet> {
                           runSpacing: 7,
                           children: ItemKind.values
                               .map(
-                                (kind) => ChoiceChip(
-                                  label: Text(
-                                    kind == ItemKind.link
-                                        ? 'Link'
-                                        : kind == ItemKind.photo
-                                            ? 'Image'
-                                            : kind == ItemKind.file
-                                                ? 'File'
-                                                : kind.label,
-                                  ),
-                                  selected: state.kind == kind,
-                                  showCheckmark: false,
-                                  selectedColor: context.colors.tint,
-                                  backgroundColor: context.colors.surface,
-                                  side: BorderSide(
-                                    color: state.kind == kind
-                                        ? context.colors.tint
-                                        : context.colors.line,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  labelStyle: TextStyle(
-                                    fontSize: 13,
-                                    color: state.kind == kind
-                                        ? context.colors.iris
-                                        : context.colors.muted,
-                                  ),
-                                  onSelected: state.saving
-                                      ? null
-                                      : (_) {
-                                          _valueController.clear();
-                                          _titleController.clear();
-                                          context.read<CaptureBloc>().add(
-                                                CaptureKindChanged(kind),
-                                              );
-                                        },
-                                ),
+                                (kind) {
+                                  final isSelected = state.kind == kind;
+                                  final icon = switch (kind) {
+                                    ItemKind.link => LucideIcons.link,
+                                    ItemKind.photo => LucideIcons.images,
+                                    ItemKind.audio => LucideIcons.music,
+                                    ItemKind.file => LucideIcons.fileText,
+                                    ItemKind.text => LucideIcons.type,
+                                  };
+                                  return PressScale(
+                                    child: ChoiceChip(
+                                      avatar: Icon(
+                                        icon,
+                                        size: 15,
+                                        color: isSelected
+                                            ? context.colors.iris
+                                            : context.colors.muted,
+                                      ),
+                                      label: Text(
+                                        kind == ItemKind.link
+                                            ? 'Link'
+                                            : kind == ItemKind.photo
+                                                ? 'Image'
+                                                : kind == ItemKind.file
+                                                    ? 'File'
+                                                    : kind.label,
+                                      ),
+                                      selected: isSelected,
+                                      showCheckmark: false,
+                                      selectedColor: context.colors.tint,
+                                      backgroundColor: context.colors.surface,
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? context.colors.tint
+                                            : context.colors.line,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      labelStyle: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                        color: isSelected
+                                            ? context.colors.iris
+                                            : context.colors.muted,
+                                      ),
+                                      onSelected: state.saving
+                                          ? null
+                                          : (_) {
+                                              HapticFeedback.lightImpact();
+                                              _valueController.clear();
+                                              _titleController.clear();
+                                              context.read<CaptureBloc>().add(
+                                                    CaptureKindChanged(kind),
+                                                  );
+                                            },
+                                    ),
+                                  );
+                                },
                               )
                               .toList(),
                         ),
@@ -284,8 +309,8 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               counterText: '',
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          TextButton.icon(
+                          const SizedBox(height: 8),
+                          YankButton.subtle(
                             onPressed: state.saving
                                 ? null
                                 : () async {
@@ -324,8 +349,8 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                       }
                                     }
                                   },
-                            icon: const Icon(LucideIcons.clipboard, size: 16),
-                            label: const Text('Paste from clipboard'),
+                            icon: LucideIcons.clipboard,
+                            label: 'Paste from clipboard',
                           ),
                           const SizedBox(height: 10),
                           TextField(
@@ -346,7 +371,10 @@ class _CaptureSheetState extends State<CaptureSheet> {
                           if (state.filePath == null)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 22,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.colors.surface,
                                 borderRadius: BorderRadius.circular(14),
@@ -354,47 +382,51 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               ),
                               child: Column(
                                 children: [
-                                  Icon(
-                                    LucideIcons.image,
-                                    size: 36,
-                                    color: context.colors.iris,
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: context.colors.tint,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.images,
+                                      size: 26,
+                                      color: context.colors.iris,
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 12),
                                   Text(
                                     'Add an image to your library',
                                     style:
                                         Theme.of(context).textTheme.titleSmall,
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 16),
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: OutlinedButton.icon(
+                                        child: YankButton.secondary(
                                           onPressed: (state.saving || _isPicking)
                                               ? null
                                               : () => _pickImage(
                                                     ImageSource.gallery,
                                                   ),
-                                          icon: const Icon(
-                                            LucideIcons.image,
-                                            size: 16,
-                                          ),
-                                          label: const Text('Photos'),
+                                          icon: LucideIcons.image,
+                                          label: 'Photos',
+                                          fullWidth: true,
                                         ),
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
-                                        child: OutlinedButton.icon(
+                                        child: YankButton.secondary(
                                           onPressed: (state.saving || _isPicking)
                                               ? null
                                               : () => _pickImage(
                                                     ImageSource.camera,
                                                   ),
-                                          icon: const Icon(
-                                            LucideIcons.camera,
-                                            size: 16,
-                                          ),
-                                          label: const Text('Camera'),
+                                          icon: LucideIcons.camera,
+                                          label: 'Camera',
+                                          fullWidth: true,
                                         ),
                                       ),
                                     ],
@@ -418,20 +450,22 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                   Positioned(
                                     top: 10,
                                     right: 10,
-                                    child: IconButton.filled(
-                                      style: IconButton.styleFrom(
-                                        backgroundColor:
-                                            Colors.black.withValues(alpha: 0.6),
-                                      ),
-                                      onPressed: state.saving
-                                          ? null
-                                          : () => context
-                                              .read<CaptureBloc>()
-                                              .add(const CaptureFileCleared()),
-                                      icon: const Icon(
-                                        LucideIcons.x,
-                                        size: 16,
-                                        color: Colors.white,
+                                    child: PressScale(
+                                      child: IconButton.filled(
+                                        style: IconButton.styleFrom(
+                                          backgroundColor:
+                                              Colors.black.withValues(alpha: 0.6),
+                                        ),
+                                        onPressed: state.saving
+                                            ? null
+                                            : () => context
+                                                .read<CaptureBloc>()
+                                                .add(const CaptureFileCleared()),
+                                        icon: const Icon(
+                                          LucideIcons.x,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -464,9 +498,9 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               enabled: !state.saving,
                               maxLength: 120,
                               onChanged: (title) =>
-                                  context.read<CaptureBloc>().add(
-                                        CaptureTitleChanged(title),
-                                      ),
+                                   context.read<CaptureBloc>().add(
+                                         CaptureTitleChanged(title),
+                                       ),
                               decoration: const InputDecoration(
                                 labelText: 'Caption or title (optional)',
                                 hintText: 'What is this photo about?',
@@ -478,7 +512,10 @@ class _CaptureSheetState extends State<CaptureSheet> {
                           if (state.filePath == null)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(22),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 22,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.colors.surface,
                                 borderRadius: BorderRadius.circular(14),
@@ -486,26 +523,33 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               ),
                               child: Column(
                                 children: [
-                                  Icon(
-                                    LucideIcons.music,
-                                    size: 36,
-                                    color: context.colors.iris,
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: context.colors.tint,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.music,
+                                      size: 26,
+                                      color: context.colors.iris,
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 12),
                                   Text(
                                     'Choose an audio track or voice note',
                                     style:
                                         Theme.of(context).textTheme.titleSmall,
                                   ),
-                                  const SizedBox(height: 14),
-                                  OutlinedButton.icon(
-                                    onPressed:
-                                        (state.saving || _isPicking) ? null : _pickAudio,
-                                    icon: const Icon(
-                                      LucideIcons.fileAudio,
-                                      size: 16,
-                                    ),
-                                    label: const Text('Browse audio files'),
+                                  const SizedBox(height: 16),
+                                  YankButton.secondary(
+                                    onPressed: (state.saving || _isPicking)
+                                        ? null
+                                        : _pickAudio,
+                                    icon: LucideIcons.fileAudio,
+                                    label: 'Browse audio files',
+                                    fullWidth: true,
                                   ),
                                 ],
                               ),
@@ -521,10 +565,18 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    LucideIcons.music,
-                                    size: 28,
-                                    color: context.colors.iris,
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: context.colors.tint,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.music,
+                                      size: 22,
+                                      color: context.colors.iris,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -549,13 +601,15 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: state.saving
-                                        ? null
-                                        : () => context
-                                            .read<CaptureBloc>()
-                                            .add(const CaptureFileCleared()),
-                                    icon: const Icon(LucideIcons.x, size: 18),
+                                  PressScale(
+                                    child: IconButton(
+                                      onPressed: state.saving
+                                          ? null
+                                          : () => context
+                                              .read<CaptureBloc>()
+                                              .add(const CaptureFileCleared()),
+                                      icon: const Icon(LucideIcons.x, size: 18),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -580,7 +634,10 @@ class _CaptureSheetState extends State<CaptureSheet> {
                           if (state.filePath == null)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(22),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 22,
+                              ),
                               decoration: BoxDecoration(
                                 color: context.colors.surface,
                                 borderRadius: BorderRadius.circular(14),
@@ -588,26 +645,33 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               ),
                               child: Column(
                                 children: [
-                                  Icon(
-                                    LucideIcons.fileText,
-                                    size: 36,
-                                    color: context.colors.iris,
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: context.colors.tint,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.fileText,
+                                      size: 26,
+                                      color: context.colors.iris,
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 12),
                                   Text(
                                     'Choose a document or file',
                                     style:
                                         Theme.of(context).textTheme.titleSmall,
                                   ),
-                                  const SizedBox(height: 14),
-                                  OutlinedButton.icon(
-                                    onPressed:
-                                        (state.saving || _isPicking) ? null : _pickFile,
-                                    icon: const Icon(
-                                      LucideIcons.fileUp,
-                                      size: 16,
-                                    ),
-                                    label: const Text('Browse files'),
+                                  const SizedBox(height: 16),
+                                  YankButton.secondary(
+                                    onPressed: (state.saving || _isPicking)
+                                        ? null
+                                        : _pickFile,
+                                    icon: LucideIcons.fileUp,
+                                    label: 'Browse files',
+                                    fullWidth: true,
                                   ),
                                 ],
                               ),
@@ -623,10 +687,18 @@ class _CaptureSheetState extends State<CaptureSheet> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    LucideIcons.fileText,
-                                    size: 28,
-                                    color: context.colors.iris,
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: context.colors.tint,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.fileText,
+                                      size: 22,
+                                      color: context.colors.iris,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -651,13 +723,15 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: state.saving
-                                        ? null
-                                        : () => context
-                                            .read<CaptureBloc>()
-                                            .add(const CaptureFileCleared()),
-                                    icon: const Icon(LucideIcons.x, size: 18),
+                                  PressScale(
+                                    child: IconButton(
+                                      onPressed: state.saving
+                                          ? null
+                                          : () => context
+                                              .read<CaptureBloc>()
+                                              .add(const CaptureFileCleared()),
+                                      icon: const Icon(LucideIcons.x, size: 18),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -691,26 +765,16 @@ class _CaptureSheetState extends State<CaptureSheet> {
                             ),
                           ),
                         const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: state.saving
-                                ? null
-                                : () => context.read<CaptureBloc>().add(
-                                      const CaptureSubmitted(),
-                                    ),
-                            icon: state.saving
-                                ? const SizedBox.square(
-                                    dimension: 17,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(LucideIcons.plus, size: 18),
-                            label: Text(
-                              state.saving ? 'Saving...' : 'Add to library',
-                            ),
-                          ),
+                        YankButton(
+                          onPressed: state.saving
+                              ? null
+                              : () => context.read<CaptureBloc>().add(
+                                    const CaptureSubmitted(),
+                                  ),
+                          icon: LucideIcons.plus,
+                          label: 'Add to library',
+                          loading: state.saving,
+                          fullWidth: true,
                         ),
                       ],
                     ),

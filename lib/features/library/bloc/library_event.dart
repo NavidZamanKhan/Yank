@@ -120,3 +120,11 @@ final class LocalCopyRemoved extends LibraryEvent {
   @override
   List<Object?> get props => [id];
 }
+
+final class NoticePosted extends LibraryEvent {
+  const NoticePosted(this.message, {this.undo});
+  final String message;
+  final YankItem? undo;
+  @override
+  List<Object?> get props => [message, undo];
+}

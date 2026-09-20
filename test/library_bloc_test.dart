@@ -45,4 +45,18 @@ void main() {
     await bloc.close();
     await repository.close();
   });
+
+  test('NoticePosted emits a notice in LibraryState', () async {
+    final repository = await DemoLibraryRepository.open(MemoryMetadataStore());
+    final bloc = LibraryBloc(repository);
+    final noticeFuture = bloc.stream.firstWhere(
+      (state) => state.notice?.message == 'Yanked. It is in your library.',
+    );
+    bloc.add(const NoticePosted('Yanked. It is in your library.'));
+    final stateWithNotice = await noticeFuture;
+    expect(stateWithNotice.notice?.message, 'Yanked. It is in your library.');
+    expect(stateWithNotice.notice?.serial, isNotNull);
+    await bloc.close();
+    await repository.close();
+  });
 }

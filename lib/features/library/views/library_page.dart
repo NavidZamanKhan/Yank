@@ -91,7 +91,7 @@ class _LibraryPageState extends State<LibraryPage>
     }
     _clear();
     _bloc.add(const SectionChanged(LibrarySection.library));
-    showMessage(context, 'Yanked. It is in your library.');
+    _bloc.add(const NoticePosted('Yanked. It is in your library.'));
   }
 
   void _clear() {
