@@ -226,6 +226,8 @@ class _TypeTabBarState extends State<_TypeTabBar>
     ItemKind.file,
   ];
 
+  static const _sweepCurve = Cubic(0.35, 0.0, 0.15, 1.18);
+
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
@@ -243,12 +245,44 @@ class _TypeTabBarState extends State<_TypeTabBar>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: const Duration(milliseconds: 340),
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutBack,
+      curve: _sweepCurve,
     );
+  }
+
+  void _animateTo(int targetIndex) {
+    if (_lastWidth > 0) {
+      final tabWidth = _lastWidth / _kinds.length;
+      if (_controller.isAnimating) {
+        _startX = _startX + (_targetX - _startX) * _animation.value;
+      } else {
+        _startX = _targetX;
+      }
+      final steps = (targetIndex - _currentIndex).abs();
+      _currentIndex = targetIndex;
+      _targetX = (_currentIndex + 0.5) * tabWidth;
+      final durationMs = 300 + (steps.clamp(1, 4) * 25);
+      _controller.duration = YankMotion.duration(
+        context,
+        Duration(milliseconds: durationMs),
+      );
+      _controller.forward(from: 0.0);
+    } else {
+      _currentIndex = targetIndex;
+    }
+  }
+
+  void _select(ItemKind? kind) {
+    final newIndex = _kinds.indexOf(kind);
+    final resolved = newIndex < 0 ? 0 : newIndex;
+    if (resolved != _currentIndex) {
+      HapticFeedback.lightImpact();
+      _animateTo(resolved);
+      widget.onKind(kind);
+    }
   }
 
   @override
@@ -258,23 +292,7 @@ class _TypeTabBarState extends State<_TypeTabBar>
       final newIndex = _kinds.indexOf(widget.selectedKind);
       final resolved = newIndex < 0 ? 0 : newIndex;
       if (resolved != _currentIndex) {
-        if (_lastWidth > 0) {
-          final tabWidth = _lastWidth / _kinds.length;
-          if (_controller.isAnimating) {
-            _startX = _startX + (_targetX - _startX) * _animation.value;
-          } else {
-            _startX = _targetX;
-          }
-          _currentIndex = resolved;
-          _targetX = (_currentIndex + 0.5) * tabWidth;
-          _controller.duration = YankMotion.duration(
-            context,
-            const Duration(milliseconds: 320),
-          );
-          _controller.forward(from: 0.0);
-        } else {
-          _currentIndex = resolved;
-        }
+        _animateTo(resolved);
       }
     }
   }
@@ -311,17 +329,16 @@ class _TypeTabBarState extends State<_TypeTabBar>
             clipBehavior: Clip.none,
             children: [
               Row(
-                children: _kinds.map((kind) {
-                  final isSelected = widget.selectedKind == kind;
+                children: _kinds.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final kind = entry.value;
+                  final isSelected = _currentIndex == index;
                   final label = kind?.label ?? 'All';
                   return Expanded(
                     child: _TypeTab(
                       label: label,
                       selected: isSelected,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        widget.onKind(kind);
-                      },
+                      onTap: () => _select(kind),
                     ),
                   );
                 }).toList(),
