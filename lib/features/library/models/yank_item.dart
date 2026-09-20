@@ -85,6 +85,29 @@ class YankItem {
     deleted: deleted ?? this.deleted,
   );
 
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    try {
+      final dynamic dyn = value;
+      final dt = dyn.toDate();
+      if (dt is DateTime) return dt;
+    } catch (_) {}
+    return DateTime.now();
+  }
+
+  static DateTime? _parseNullableDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    try {
+      final dynamic dyn = value;
+      final dt = dyn.toDate();
+      if (dt is DateTime) return dt;
+    } catch (_) {}
+    return null;
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'kind': kind.name,
@@ -100,21 +123,24 @@ class YankItem {
     'archived': archived,
     'deleted': deleted,
   };
-  factory YankItem.fromJson(Map<String, dynamic> json) => YankItem(
-    id: json['id'] as String,
-    kind: ItemKind.values.byName(json['kind'] as String),
-    title: json['title'] as String,
-    createdAt: DateTime.parse(json['createdAt'] as String),
+
+  factory YankItem.fromMap(Map<String, dynamic> json, {String? id}) => YankItem(
+    id: id ?? (json['id'] as String? ?? ''),
+    kind: ItemKind.values.where((k) => k.name == json['kind']).firstOrNull ??
+        ItemKind.link,
+    title: json['title'] as String? ?? '',
+    createdAt: _parseDateTime(json['createdAt']),
     body: json['body'] as String? ?? '',
     url: json['url'] as String?,
     artwork: json['artwork'] as String?,
     audioAsset: json['audioAsset'] as String?,
     durationSeconds: json['durationSeconds'] as int? ?? 0,
     sizeBytes: json['sizeBytes'] as int? ?? 0,
-    yankedAt: json['yankedAt'] == null
-        ? null
-        : DateTime.parse(json['yankedAt'] as String),
+    yankedAt: _parseNullableDateTime(json['yankedAt']),
     archived: json['archived'] as bool? ?? false,
     deleted: json['deleted'] as bool? ?? false,
   );
+
+  factory YankItem.fromJson(Map<String, dynamic> json) =>
+      YankItem.fromMap(json);
 }
