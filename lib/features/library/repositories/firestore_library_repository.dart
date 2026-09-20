@@ -55,21 +55,24 @@ class FirestoreLibraryRepository implements LibraryRepository {
       onError: (Object error, StackTrace stack) {
         debugPrint('FirestoreLibraryRepository snapshot error: $error');
         if (!completer.isCompleted) {
-          completer.complete();
+          completer.completeError(error, stack);
         }
       },
     );
 
-    await completer.future.timeout(
-      const Duration(seconds: 4),
-      onTimeout: () {},
-    );
+    try {
+      await completer.future.timeout(const Duration(seconds: 4));
+    } catch (error) {
+      await close();
+      throw StateError('Firestore connection failed: $error');
+    }
 
     if (_items.isEmpty && seedIfEmpty) {
       try {
         await _seedDemoFixtures();
       } catch (e) {
-        debugPrint('FirestoreLibraryRepository seeding error: $e');
+        await close();
+        throw StateError('Firestore seeding failed: $e');
       }
     }
   }
