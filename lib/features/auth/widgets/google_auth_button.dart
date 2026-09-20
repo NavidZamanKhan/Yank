@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/motion/yank_motion.dart';
+import 'package:yank/core/motion/yank_motion.dart';
 
 class GoogleAuthButton extends StatelessWidget {
   const GoogleAuthButton({

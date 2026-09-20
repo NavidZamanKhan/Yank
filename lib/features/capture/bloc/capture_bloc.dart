@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../library/models/library_projection.dart';
-import '../../library/models/yank_item.dart';
-import '../../library/repositories/demo_fixtures.dart';
-import '../../library/repositories/library_repository.dart';
+import 'package:yank/features/library/models/library_projection.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/demo_fixtures.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
 
 sealed class CaptureEvent extends Equatable {
   const CaptureEvent();

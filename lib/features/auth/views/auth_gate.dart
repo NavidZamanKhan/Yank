@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/motion/yank_motion.dart';
-import '../../../core/widgets/yank_feedback.dart';
-import '../../audio/bloc/audio_bloc.dart';
-import '../../audio/repositories/audio_repository.dart';
-import '../../library/bloc/library_bloc.dart';
-import '../../library/repositories/firestore_library_repository.dart';
-import '../../library/repositories/library_repository.dart';
-import '../../library/views/library_page.dart';
-import '../bloc/auth_bloc.dart';
-import '../models/auth_user.dart';
-import 'auth_page.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/widgets/yank_feedback.dart';
+import 'package:yank/features/audio/bloc/audio_bloc.dart';
+import 'package:yank/features/audio/repositories/audio_repository.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/repositories/firestore_library_repository.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
+import 'package:yank/features/library/views/library_page.dart';
+import 'package:yank/features/auth/bloc/auth_bloc.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
+import 'package:yank/features/auth/views/auth_page.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key, this.audioFactory});

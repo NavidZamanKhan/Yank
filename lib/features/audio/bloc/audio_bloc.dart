@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../library/models/yank_item.dart';
-import '../repositories/audio_repository.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/audio/repositories/audio_repository.dart';
 
 sealed class AudioEvent extends Equatable {
   const AudioEvent();

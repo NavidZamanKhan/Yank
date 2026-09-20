@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-import '../models/auth_user.dart';
-import 'auth_event.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
+import 'package:yank/features/auth/bloc/auth_event.dart';
 
 enum AuthActivity { idle, google, email, otp, loggingOut }
 

@@ -5,10 +5,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/widgets/yank_feedback.dart';
-import '../bloc/library_bloc.dart';
-import '../models/yank_item.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_feedback.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 enum ItemMenuAction { preview, copy, share, archive, removeDownload, delete }
 

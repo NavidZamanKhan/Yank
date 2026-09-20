@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import '../../library/repositories/metadata_store.dart';
-import '../models/auth_input.dart';
-import '../models/auth_user.dart';
-import 'auth_repository.dart';
+import 'package:yank/features/library/repositories/metadata_store.dart';
+import 'package:yank/features/auth/models/auth_input.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
+import 'package:yank/features/auth/repositories/auth_repository.dart';
 
 /// A local navigation/session demo, explicitly not an authentication system.
 /// Any valid email and 8–128 character sample password work in both modes.

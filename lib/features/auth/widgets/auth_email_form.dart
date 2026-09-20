@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../bloc/auth_bloc.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/features/auth/bloc/auth_bloc.dart';
 
 class AuthEmailForm extends StatefulWidget {
   const AuthEmailForm({super.key, required this.state});

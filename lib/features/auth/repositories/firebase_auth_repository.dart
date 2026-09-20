@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../models/auth_failure.dart';
-import '../models/auth_input.dart';
-import '../models/auth_user.dart';
-import 'auth_repository.dart';
+import 'package:yank/features/auth/models/auth_failure.dart';
+import 'package:yank/features/auth/models/auth_input.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
+import 'package:yank/features/auth/repositories/auth_repository.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({

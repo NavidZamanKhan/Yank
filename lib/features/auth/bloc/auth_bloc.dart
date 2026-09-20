@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/auth_failure.dart';
-import '../models/auth_input.dart';
-import '../repositories/auth_repository.dart';
-import 'auth_event.dart';
-import 'auth_state.dart';
+import 'package:yank/features/auth/models/auth_failure.dart';
+import 'package:yank/features/auth/models/auth_input.dart';
+import 'package:yank/features/auth/repositories/auth_repository.dart';
+import 'package:yank/features/auth/bloc/auth_event.dart';
+import 'package:yank/features/auth/bloc/auth_state.dart';
 export 'auth_event.dart';
 export 'auth_state.dart';
 

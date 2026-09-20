@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import '../models/yank_item.dart';
-import 'demo_fixtures.dart';
-import 'library_repository.dart';
-import 'metadata_store.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/demo_fixtures.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
+import 'package:yank/features/library/repositories/metadata_store.dart';
 
 class DemoLibraryRepository implements LibraryRepository {
   DemoLibraryRepository._(this._store, this._items);

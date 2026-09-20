@@ -3,14 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../../audio/widgets/audio_controls.dart';
-import '../bloc/library_bloc.dart';
-import '../models/yank_item.dart';
-import 'item_actions.dart';
-import 'poster_artwork.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/utils/formatters.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/features/audio/widgets/audio_controls.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/widgets/item_actions.dart';
+import 'package:yank/features/library/widgets/poster_artwork.dart';
 
 class YankItemCard extends StatelessWidget {
   const YankItemCard({

@@ -4,13 +4,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../core/theme/yank_theme.dart';
-import '../features/audio/repositories/audio_repository.dart';
-import '../features/auth/bloc/auth_bloc.dart';
-import '../features/auth/repositories/auth_repository.dart';
-import '../features/auth/views/auth_gate.dart';
-import '../features/library/repositories/library_repository.dart';
-import '../features/settings/bloc/settings_bloc.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/features/audio/repositories/audio_repository.dart';
+import 'package:yank/features/auth/bloc/auth_bloc.dart';
+import 'package:yank/features/auth/repositories/auth_repository.dart';
+import 'package:yank/features/auth/views/auth_gate.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
+import 'package:yank/features/settings/bloc/settings_bloc.dart';
 
 class YankApp extends StatelessWidget {
   const YankApp({

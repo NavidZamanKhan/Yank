@@ -4,21 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../../../core/widgets/yank_feedback.dart';
-import '../../audio/bloc/audio_bloc.dart';
-import '../../audio/widgets/audio_controls.dart';
-import '../../capture/views/capture_sheet.dart';
-import '../../preview/views/item_preview.dart';
-import '../../settings/bloc/settings_bloc.dart';
-import '../../settings/views/settings_sheet.dart';
-import '../bloc/library_bloc.dart';
-import '../models/yank_item.dart';
-import '../widgets/item_actions.dart';
-import '../widgets/library_feed.dart';
-import '../widgets/library_header.dart';
-import '../widgets/library_navigation.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/core/widgets/yank_feedback.dart';
+import 'package:yank/features/audio/bloc/audio_bloc.dart';
+import 'package:yank/features/audio/widgets/audio_controls.dart';
+import 'package:yank/features/capture/views/capture_sheet.dart';
+import 'package:yank/features/preview/views/item_preview.dart';
+import 'package:yank/features/settings/bloc/settings_bloc.dart';
+import 'package:yank/features/settings/views/settings_sheet.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/widgets/item_actions.dart';
+import 'package:yank/features/library/widgets/library_feed.dart';
+import 'package:yank/features/library/widgets/library_header.dart';
+import 'package:yank/features/library/widgets/library_navigation.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/motion/yank_motion.dart';
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/utils/formatters.dart';
-import '../../library/models/yank_item.dart';
-import '../bloc/audio_bloc.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/utils/formatters.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/audio/bloc/audio_bloc.dart';
 
 class AudioControls extends StatelessWidget {
   const AudioControls({super.key, required this.item});

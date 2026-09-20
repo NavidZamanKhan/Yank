@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../../audio/bloc/audio_bloc.dart';
-import '../../auth/widgets/logout_tile.dart';
-import '../../library/bloc/library_bloc.dart';
-import '../../library/models/yank_item.dart';
-import '../bloc/settings_bloc.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/features/audio/bloc/audio_bloc.dart';
+import 'package:yank/features/auth/widgets/logout_tile.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/settings/bloc/settings_bloc.dart';
 
 Future<void> showSettingsSheet(
   BuildContext context, {

@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../repositories/settings_repository.dart';
+import 'package:yank/features/settings/repositories/settings_repository.dart';
 export '../repositories/settings_repository.dart';
 
 sealed class SettingsEvent extends Equatable {

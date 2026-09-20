@@ -1,4 +1,4 @@
-import '../models/yank_item.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 abstract interface class LibraryRepository {
   List<YankItem> get items;

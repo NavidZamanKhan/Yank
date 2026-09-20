@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'metadata_store.dart';
+import 'package:yank/features/library/repositories/metadata_store.dart';
 
 class PreferencesMetadataStore implements MetadataStore {
   PreferencesMetadataStore() : _preferences = SharedPreferencesAsync();

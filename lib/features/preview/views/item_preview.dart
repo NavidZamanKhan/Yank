@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../../audio/widgets/audio_controls.dart';
-import '../../library/bloc/library_bloc.dart';
-import '../../library/models/yank_item.dart';
-import '../../library/widgets/item_actions.dart';
-import '../../library/widgets/poster_artwork.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/utils/formatters.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/features/audio/widgets/audio_controls.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/widgets/item_actions.dart';
+import 'package:yank/features/library/widgets/poster_artwork.dart';
 
 Future<void> showItemPreview(
   BuildContext context,

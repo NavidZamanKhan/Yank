@@ -1,4 +1,4 @@
-import '../models/yank_item.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 abstract final class DemoFixtures {
   static const brief = '''Yank

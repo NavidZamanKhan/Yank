@@ -1,4 +1,4 @@
-import 'yank_item.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 abstract final class LibraryProjection {
   static List<YankItem> select(

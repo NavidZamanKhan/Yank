@@ -1,4 +1,4 @@
-import '../models/auth_user.dart';
+import 'package:yank/features/auth/models/auth_user.dart';
 
 abstract interface class AuthRepository {
   bool get isDemo;

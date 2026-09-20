@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/yank_item.dart';
-import '../repositories/library_repository.dart';
-import 'library_event.dart';
-import 'library_state.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
+import 'package:yank/features/library/bloc/library_event.dart';
+import 'package:yank/features/library/bloc/library_state.dart';
 export 'library_event.dart';
 export 'library_state.dart';
 

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
-import '../../library/repositories/metadata_store.dart';
+import 'package:yank/features/library/repositories/metadata_store.dart';
 
 class AppearanceSettings extends Equatable {
   const AppearanceSettings({

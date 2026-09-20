@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../models/yank_item.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 sealed class LibraryEvent extends Equatable {
   const LibraryEvent();

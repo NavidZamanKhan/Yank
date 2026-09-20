@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/motion/yank_motion.dart';
-import '../../../core/theme/yank_theme.dart';
-import '../../library/widgets/poster_artwork.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/features/library/widgets/poster_artwork.dart';
 
 /// A small illustration made from the app's own content vocabulary. It has no
 /// controls and no perpetual floating animation. The cards settle once on entry.

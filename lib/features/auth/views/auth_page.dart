@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/motion/yank_motion.dart';
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../bloc/auth_bloc.dart';
-import '../widgets/auth_card_stack.dart';
-import '../widgets/auth_email_form.dart';
-import '../widgets/auth_otp_form.dart';
-import '../widgets/google_auth_button.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/features/auth/bloc/auth_bloc.dart';
+import 'package:yank/features/auth/widgets/auth_card_stack.dart';
+import 'package:yank/features/auth/widgets/auth_email_form.dart';
+import 'package:yank/features/auth/widgets/auth_otp_form.dart';
+import 'package:yank/features/auth/widgets/google_auth_button.dart';
 
 class AuthPage extends StatelessWidget {
   const AuthPage({super.key});

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../motion/yank_motion.dart';
-import '../theme/yank_theme.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/theme/yank_theme.dart';
 
 class YankWordmark extends StatelessWidget {
   const YankWordmark({super.key, this.size = 32});

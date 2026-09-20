@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-import '../models/yank_item.dart';
-import 'demo_fixtures.dart';
-import 'library_repository.dart';
+import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/demo_fixtures.dart';
+import 'package:yank/features/library/repositories/library_repository.dart';
 
 class FirestoreLibraryRepository implements LibraryRepository {
   FirestoreLibraryRepository({

@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 
-import 'app/yank_app.dart';
-import 'core/theme/yank_theme.dart';
-import 'features/auth/repositories/auth_repository.dart';
-import 'features/auth/repositories/demo_auth_repository.dart';
-import 'features/auth/repositories/firebase_auth_repository.dart';
-import 'features/library/repositories/demo_fixtures.dart';
-import 'features/library/repositories/demo_library_repository.dart';
-import 'features/library/repositories/preferences_metadata_store.dart';
-import 'features/settings/repositories/settings_repository.dart';
-import 'firebase_options.dart';
+import 'package:yank/app/yank_app.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/features/auth/repositories/auth_repository.dart';
+import 'package:yank/features/auth/repositories/demo_auth_repository.dart';
+import 'package:yank/features/auth/repositories/firebase_auth_repository.dart';
+import 'package:yank/features/library/repositories/demo_fixtures.dart';
+import 'package:yank/features/library/repositories/demo_library_repository.dart';
+import 'package:yank/features/library/repositories/preferences_metadata_store.dart';
+import 'package:yank/features/settings/repositories/settings_repository.dart';
+import 'package:yank/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

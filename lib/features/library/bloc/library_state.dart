@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-import '../models/library_projection.dart';
-import '../models/yank_item.dart';
+import 'package:yank/features/library/models/library_projection.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 const _unchanged = Object();
 

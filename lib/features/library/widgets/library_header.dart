@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/motion/yank_motion.dart';
-import '../../../core/theme/yank_theme.dart';
-import '../../../core/widgets/yank_controls.dart';
-import '../bloc/library_bloc.dart';
-import '../models/yank_item.dart';
+import 'package:yank/core/motion/yank_motion.dart';
+import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/features/library/bloc/library_bloc.dart';
+import 'package:yank/features/library/models/yank_item.dart';
 
 class LibraryHeader extends StatelessWidget {
   const LibraryHeader({
