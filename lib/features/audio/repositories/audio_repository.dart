@@ -89,7 +89,16 @@ class AssetAudioRepository implements AudioRepository {
     _position = Duration.zero;
     _duration = Duration.zero;
     _id = id;
-    await _player.play(AssetSource(asset), volume: .65);
+    final Source source;
+    if (asset.startsWith('/') || asset.startsWith('file:')) {
+      final path = asset.replaceFirst(RegExp(r'^file://'), '');
+      source = DeviceFileSource(path);
+    } else if (asset.startsWith('http://') || asset.startsWith('https://')) {
+      source = UrlSource(asset);
+    } else {
+      source = AssetSource(asset);
+    }
+    await _player.play(source, volume: .65);
   }
 
   @override

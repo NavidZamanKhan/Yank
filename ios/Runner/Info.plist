@@ -66,6 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Yank needs access to your photo library to save and organize your images.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Yank needs access to your camera to take and capture photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Yank needs access to your microphone to capture audio recordings.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
