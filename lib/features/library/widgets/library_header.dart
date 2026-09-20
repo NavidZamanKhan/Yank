@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:yank/core/motion/yank_motion.dart';
@@ -149,25 +152,9 @@ class LibraryHeader extends StatelessWidget {
             },
           ),
           const SizedBox(height: 9),
-        Row(
-          children:
-              <ItemKind?>[
-                    null,
-                    ItemKind.link,
-                    ItemKind.photo,
-                    ItemKind.audio,
-                    ItemKind.file,
-                  ]
-                  .map(
-                    (kind) => Expanded(
-                      child: _TypeTab(
-                        label: kind?.label ?? 'All',
-                        selected: state.kind == kind,
-                        onTap: () => onKind(kind),
-                      ),
-                    ),
-                  )
-                  .toList(),
+        _TypeTabBar(
+          selectedKind: state.kind,
+          onKind: onKind,
         ),
         if (state.kind == ItemKind.link && state.sources.isNotEmpty)
           SizedBox(
@@ -216,45 +203,216 @@ class LibraryHeader extends StatelessWidget {
   );
 }
 
+class _TypeTabBar extends StatefulWidget {
+  const _TypeTabBar({
+    required this.selectedKind,
+    required this.onKind,
+  });
+
+  final ItemKind? selectedKind;
+  final ValueChanged<ItemKind?> onKind;
+
+  @override
+  State<_TypeTabBar> createState() => _TypeTabBarState();
+}
+
+class _TypeTabBarState extends State<_TypeTabBar>
+    with SingleTickerProviderStateMixin {
+  static const _kinds = <ItemKind?>[
+    null,
+    ItemKind.link,
+    ItemKind.photo,
+    ItemKind.audio,
+    ItemKind.file,
+  ];
+
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  int _currentIndex = 0;
+  double _startX = 0.0;
+  double _targetX = 0.0;
+  double _lastWidth = 0.0;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = _kinds.indexOf(widget.selectedKind);
+    if (_currentIndex < 0) _currentIndex = 0;
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _TypeTabBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedKind != widget.selectedKind) {
+      final newIndex = _kinds.indexOf(widget.selectedKind);
+      final resolved = newIndex < 0 ? 0 : newIndex;
+      if (resolved != _currentIndex) {
+        if (_lastWidth > 0) {
+          final tabWidth = _lastWidth / _kinds.length;
+          if (_controller.isAnimating) {
+            _startX = _startX + (_targetX - _startX) * _animation.value;
+          } else {
+            _startX = _targetX;
+          }
+          _currentIndex = resolved;
+          _targetX = (_currentIndex + 0.5) * tabWidth;
+          _controller.duration = YankMotion.duration(
+            context,
+            const Duration(milliseconds: 320),
+          );
+          _controller.forward(from: 0.0);
+        } else {
+          _currentIndex = resolved;
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        final tabWidth = totalWidth / _kinds.length;
+
+        if (!_initialized ||
+            (_lastWidth != totalWidth && !_controller.isAnimating)) {
+          _lastWidth = totalWidth;
+          _targetX = (_currentIndex + 0.5) * tabWidth;
+          _startX = _targetX;
+          _initialized = true;
+        } else if (_lastWidth != totalWidth && _controller.isAnimating) {
+          final ratio = totalWidth / (_lastWidth > 0 ? _lastWidth : totalWidth);
+          _startX *= ratio;
+          _targetX = (_currentIndex + 0.5) * tabWidth;
+          _lastWidth = totalWidth;
+        }
+
+        return SizedBox(
+          height: 48,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Row(
+                children: _kinds.map((kind) {
+                  final isSelected = widget.selectedKind == kind;
+                  final label = kind?.label ?? 'All';
+                  return Expanded(
+                    child: _TypeTab(
+                      label: label,
+                      selected: isSelected,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        widget.onKind(kind);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final reduced = MediaQuery.disableAnimationsOf(context);
+                  final progress = reduced ? 1.0 : _animation.value;
+                  final linearProgress = reduced ? 1.0 : _controller.value;
+
+                  final currentX = reduced
+                      ? _targetX
+                      : _startX + (_targetX - _startX) * progress;
+
+                  final distance = (_targetX - _startX).abs();
+                  final maxStretch = (distance * 0.12).clamp(0.0, 14.0);
+                  final stretch = (reduced || linearProgress >= 1.0)
+                      ? 0.0
+                      : maxStretch * math.sin(linearProgress * math.pi);
+                  final currentWidth = 20.0 + stretch;
+
+                  return Positioned(
+                    left: currentX - (currentWidth / 2.0),
+                    bottom: 9.5,
+                    width: currentWidth,
+                    height: 3.0,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        key: const ValueKey('type_tab_indicator'),
+                        decoration: BoxDecoration(
+                          color: context.colors.iris,
+                          borderRadius: BorderRadius.circular(2.0),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _TypeTab extends StatelessWidget {
   const _TypeTab({
     required this.label,
     required this.selected,
     required this.onTap,
   });
+
   final String label;
   final bool selected;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) => Semantics(
     selected: selected,
-    child: TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(44, 44),
-        padding: EdgeInsets.zero,
-        foregroundColor: selected ? context.colors.iris : context.colors.muted,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+    button: true,
+    child: PressScale(
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          padding: EdgeInsets.zero,
+          splashFactory: NoSplash.splashFactory,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedDefaultTextStyle(
+              duration: YankMotion.duration(
+                context,
+                const Duration(milliseconds: 200),
+              ),
+              curve: Curves.easeInOut,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? context.colors.iris : context.colors.muted,
+                fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+              ),
+              child: Text(label),
             ),
-          ),
-          const SizedBox(height: 7),
-          Container(
-            width: 20,
-            height: 3,
-            decoration: BoxDecoration(
-              color: selected ? context.colors.iris : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
+            const SizedBox(height: 7),
+            const SizedBox(width: 20, height: 3),
+          ],
+        ),
       ),
     ),
   );
