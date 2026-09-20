@@ -315,12 +315,15 @@ class _MiniPlayerState extends State<MiniPlayer>
                                 context,
                                 YankMotion.quick,
                               ),
-                              child: Text(
-                                item.title,
+                              child: SizedBox(
                                 key: ValueKey(item.id),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
+                                width: double.infinity,
+                                child: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                               ),
                             ),
                           ),

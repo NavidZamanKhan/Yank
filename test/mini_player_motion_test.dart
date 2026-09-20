@@ -99,6 +99,8 @@ void main() {
 
       // Fully expanded and visible
       expect(find.text('An idea for the weekend'), findsOneWidget);
+      final textTopLeft = tester.getTopLeft(find.text('An idea for the weekend'));
+      expect(textTopLeft.dx, equals(16.0));
       final fullBox = tester.renderObject<RenderBox>(find.byType(MiniPlayer));
       final fullHeight = fullBox.size.height;
       expect(fullHeight, greaterThanOrEqualTo(40.0));
