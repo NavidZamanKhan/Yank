@@ -52,6 +52,8 @@ class _CaptureSheetState extends State<CaptureSheet> {
     super.dispose();
   }
 
+  bool _isPicking = false;
+
   String _formatBytes(int bytes) {
     if (bytes <= 0) return '';
     if (bytes < 1024) return '$bytes B';
@@ -60,6 +62,8 @@ class _CaptureSheetState extends State<CaptureSheet> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    if (_isPicking) return;
+    setState(() => _isPicking = true);
     try {
       final picked = await _imagePicker.pickImage(
         source: source,
@@ -78,16 +82,37 @@ class _CaptureSheetState extends State<CaptureSheet> {
             );
       }
     } catch (e) {
+      if (e is PlatformException && e.code == 'multiple_request') {
+        return;
+      }
       if (mounted) {
         showMessage(context, 'Could not access photo: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPicking = false);
+      } else {
+        _isPicking = false;
       }
     }
   }
 
   Future<void> _pickAudio() async {
+    if (_isPicking) return;
+    setState(() => _isPicking = true);
     try {
       final result = await FilePicker.pickFiles(
-        type: FileType.audio,
+        type: FileType.custom,
+        allowedExtensions: [
+          'mp3',
+          'm4a',
+          'wav',
+          'aac',
+          'flac',
+          'ogg',
+          'caf',
+          'aiff',
+        ],
       );
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
@@ -103,13 +128,24 @@ class _CaptureSheetState extends State<CaptureSheet> {
         }
       }
     } catch (e) {
+      if (e is PlatformException && e.code == 'multiple_request') {
+        return;
+      }
       if (mounted) {
         showMessage(context, 'Could not select audio: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPicking = false);
+      } else {
+        _isPicking = false;
       }
     }
   }
 
   Future<void> _pickFile() async {
+    if (_isPicking) return;
+    setState(() => _isPicking = true);
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.any,
@@ -128,8 +164,17 @@ class _CaptureSheetState extends State<CaptureSheet> {
         }
       }
     } catch (e) {
+      if (e is PlatformException && e.code == 'multiple_request') {
+        return;
+      }
       if (mounted) {
         showMessage(context, 'Could not select file: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPicking = false);
+      } else {
+        _isPicking = false;
       }
     }
   }
@@ -325,7 +370,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                     children: [
                                       Expanded(
                                         child: OutlinedButton.icon(
-                                          onPressed: state.saving
+                                          onPressed: (state.saving || _isPicking)
                                               ? null
                                               : () => _pickImage(
                                                     ImageSource.gallery,
@@ -340,7 +385,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: OutlinedButton.icon(
-                                          onPressed: state.saving
+                                          onPressed: (state.saving || _isPicking)
                                               ? null
                                               : () => _pickImage(
                                                     ImageSource.camera,
@@ -455,7 +500,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                   const SizedBox(height: 14),
                                   OutlinedButton.icon(
                                     onPressed:
-                                        state.saving ? null : _pickAudio,
+                                        (state.saving || _isPicking) ? null : _pickAudio,
                                     icon: const Icon(
                                       LucideIcons.fileAudio,
                                       size: 16,
@@ -556,7 +601,8 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                   ),
                                   const SizedBox(height: 14),
                                   OutlinedButton.icon(
-                                    onPressed: state.saving ? null : _pickFile,
+                                    onPressed:
+                                        (state.saving || _isPicking) ? null : _pickFile,
                                     icon: const Icon(
                                       LucideIcons.fileUp,
                                       size: 16,
