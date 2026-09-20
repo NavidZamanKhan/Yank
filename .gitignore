@@ -13,6 +13,8 @@
 migrate_working_dir/
 .agents/
 ROADMAP.md
+AGENTS.md
+GEMINI.md
 
 # IntelliJ related
 *.iml
