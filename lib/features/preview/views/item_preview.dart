@@ -79,25 +79,33 @@ class ItemPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (availability != LocalAvailability.available)
-                    _DownloadPanel(
-                      item: item,
-                      availability: availability,
-                      offline: state.offline,
-                    )
-                  else
-                    switch (item.kind) {
-                      ItemKind.photo => _PhotoPreview(item: item),
-                      ItemKind.audio => Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: context.colors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: AudioControls(item: item),
+                  switch (item.kind) {
+                    ItemKind.photo => _PhotoPreview(
+                        item: item,
+                        availability: availability,
+                        offline: state.offline,
                       ),
-                      ItemKind.file => _DocumentPreview(item: item),
-                      ItemKind.text => SelectionArea(
+                    ItemKind.file => _DocumentPreview(
+                        item: item,
+                        availability: availability,
+                        offline: state.offline,
+                      ),
+                    ItemKind.audio =>
+                      availability != LocalAvailability.available
+                          ? _DownloadPanel(
+                              item: item,
+                              availability: availability,
+                              offline: state.offline,
+                            )
+                          : Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: context.colors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: AudioControls(item: item),
+                            ),
+                    ItemKind.text => SelectionArea(
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(22),
@@ -112,8 +120,8 @@ class ItemPreview extends StatelessWidget {
                           ),
                         ),
                       ),
-                      ItemKind.link => _LinkPreview(item: item),
-                    },
+                    ItemKind.link => _LinkPreview(item: item),
+                  },
                   const SizedBox(height: 20),
                   if (item.kind == ItemKind.audio && item.body.isNotEmpty)
                     Padding(
@@ -236,82 +244,239 @@ class _DownloadPanel extends StatelessWidget {
   }
 }
 
-class _PhotoPreview extends StatelessWidget {
-  const _PhotoPreview({required this.item});
+class _PhotoPreview extends StatefulWidget {
+  const _PhotoPreview({
+    required this.item,
+    required this.availability,
+    required this.offline,
+  });
   final YankItem item;
+  final LocalAvailability availability;
+  final bool offline;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      GestureDetector(
-        onTap: () => FullscreenPhotoViewer.open(context, item),
-        child: Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: PosterArtwork(
-                  variant: item.artwork ?? 'slow',
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(160),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(LucideIcons.expand, size: 14, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      'Tap to expand',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 14),
-      Row(
-        children: [
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: () => FullscreenPhotoViewer.open(context, item),
-              icon: const Icon(LucideIcons.maximize2, size: 16),
-              label: const Text('Open'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          OutlinedButton.icon(
-            onPressed: () => _shareLocalFile(context, item),
-            icon: const Icon(LucideIcons.share2, size: 16),
-            label: const Text('Share'),
-          ),
-        ],
-      ),
-    ],
-  );
+  State<_PhotoPreview> createState() => _PhotoPreviewState();
 }
 
-class _DocumentPreview extends StatelessWidget {
-  const _DocumentPreview({required this.item});
+class _PhotoPreviewState extends State<_PhotoPreview> {
+  bool _openOnDownload = false;
+
+  @override
+  void didUpdateWidget(covariant _PhotoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_openOnDownload &&
+        oldWidget.availability != LocalAvailability.available &&
+        widget.availability == LocalAvailability.available) {
+      _openOnDownload = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          FullscreenPhotoViewer.open(context, widget.item);
+        }
+      });
+    }
+  }
+
+  void _onDownloadThenOpen() {
+    if (widget.offline) {
+      showMessage(context, 'Connect to download this photo.');
+      return;
+    }
+    setState(() {
+      _openOnDownload = true;
+    });
+    context.read<LibraryBloc>().add(DownloadRequested(widget.item.id));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    final isAvailable = widget.availability == LocalAvailability.available;
+    final isDownloading = widget.availability == LocalAvailability.downloading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: isAvailable
+              ? () => FullscreenPhotoViewer.open(context, item)
+              : isDownloading
+                  ? null
+                  : _onDownloadThenOpen,
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: PosterArtwork(
+                    variant: item.artwork ?? 'slow',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(160),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isDownloading) ...[
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Downloading...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else if (isAvailable) ...[
+                        const Icon(LucideIcons.expand,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Tap to expand',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else ...[
+                        const Icon(LucideIcons.cloudDownload,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Download to open',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (isDownloading) ...[
+          const SizedBox(height: 10),
+          const ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+            child: LinearProgressIndicator(minHeight: 3),
+          ),
+        ],
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: isAvailable
+                  ? FilledButton.icon(
+                      onPressed: () =>
+                          FullscreenPhotoViewer.open(context, item),
+                      icon: const Icon(LucideIcons.maximize2, size: 16),
+                      label: const Text('Open'),
+                    )
+                  : isDownloading
+                      ? FilledButton.icon(
+                          onPressed: null,
+                          icon: const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          label: const Text('Downloading...'),
+                        )
+                      : FilledButton.icon(
+                          onPressed: _onDownloadThenOpen,
+                          icon: const Icon(LucideIcons.download, size: 16),
+                          label: const Text('Download then open'),
+                        ),
+            ),
+            const SizedBox(width: 10),
+            if (isDownloading)
+              OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _openOnDownload = false;
+                  });
+                  context.read<LibraryBloc>().add(DownloadCancelled(item.id));
+                },
+                child: const Text('Cancel'),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => _shareLocalFile(context, item),
+                icon: const Icon(LucideIcons.share2, size: 16),
+                label: const Text('Share'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DocumentPreview extends StatefulWidget {
+  const _DocumentPreview({
+    required this.item,
+    required this.availability,
+    required this.offline,
+  });
   final YankItem item;
+  final LocalAvailability availability;
+  final bool offline;
+
+  @override
+  State<_DocumentPreview> createState() => _DocumentPreviewState();
+}
+
+class _DocumentPreviewState extends State<_DocumentPreview> {
+  bool _openOnDownload = false;
+
+  @override
+  void didUpdateWidget(covariant _DocumentPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_openOnDownload &&
+        oldWidget.availability != LocalAvailability.available &&
+        widget.availability == LocalAvailability.available) {
+      _openOnDownload = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openFile(context, widget.item);
+        }
+      });
+    }
+  }
+
+  void _onDownloadThenOpen() {
+    if (widget.offline) {
+      showMessage(context, 'Connect to download this file.');
+      return;
+    }
+    setState(() {
+      _openOnDownload = true;
+    });
+    context.read<LibraryBloc>().add(DownloadRequested(widget.item.id));
+  }
 
   IconData _getFileIcon(String name) {
     final lower = name.toLowerCase();
@@ -355,6 +520,9 @@ class _DocumentPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
+    final isAvailable = widget.availability == LocalAvailability.available;
+    final isDownloading = widget.availability == LocalAvailability.downloading;
     final title = item.displayTitle;
     final badge = _getExtensionBadge(title);
     final icon = _getFileIcon(title);
@@ -439,22 +607,57 @@ class _DocumentPreview extends StatelessWidget {
                   Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
           ],
+          if (isDownloading) ...[
+            const SizedBox(height: 16),
+            const ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(2)),
+              child: LinearProgressIndicator(minHeight: 3),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _openFile(context, item),
-                  icon: const Icon(LucideIcons.externalLink, size: 16),
-                  label: const Text('Open'),
-                ),
+                child: isAvailable
+                    ? FilledButton.icon(
+                        onPressed: () => _openFile(context, item),
+                        icon: const Icon(LucideIcons.externalLink, size: 16),
+                        label: const Text('Open'),
+                      )
+                    : isDownloading
+                        ? FilledButton.icon(
+                            onPressed: null,
+                            icon: const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            label: const Text('Downloading...'),
+                          )
+                        : FilledButton.icon(
+                            onPressed: _onDownloadThenOpen,
+                            icon: const Icon(LucideIcons.download, size: 16),
+                            label: const Text('Download then open'),
+                          ),
               ),
               const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () => _shareLocalFile(context, item),
-                icon: const Icon(LucideIcons.share2, size: 16),
-                label: const Text('Share'),
-              ),
+              if (isDownloading)
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _openOnDownload = false;
+                    });
+                    context.read<LibraryBloc>().add(DownloadCancelled(item.id));
+                  },
+                  child: const Text('Cancel'),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: () => _shareLocalFile(context, item),
+                  icon: const Icon(LucideIcons.share2, size: 16),
+                  label: const Text('Share'),
+                ),
             ],
           ),
         ],
@@ -464,7 +667,7 @@ class _DocumentPreview extends StatelessWidget {
 }
 
 Future<void> _openFile(BuildContext context, YankItem item) async {
-  final path = item.url ?? item.body;
+  final path = item.url ?? item.artwork ?? item.audioAsset ?? item.body;
   if (path.isEmpty) {
     showMessage(context, 'No file path found.');
     return;
