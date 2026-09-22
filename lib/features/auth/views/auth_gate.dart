@@ -14,6 +14,7 @@ import 'package:yank/features/library/views/library_page.dart';
 import 'package:yank/features/auth/bloc/auth_bloc.dart';
 import 'package:yank/features/auth/models/auth_user.dart';
 import 'package:yank/features/auth/views/auth_page.dart';
+import 'package:yank/features/capture/widgets/share_receiver_listener.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key, this.audioFactory});
@@ -145,12 +146,14 @@ class _LibrarySessionState extends State<_LibrarySession> {
                 AudioBloc(widget.audioFactory?.call() ?? AssetAudioRepository()),
           ),
         ],
-        child: NavigatorPopHandler<void>(
-          onPopWithResult: (_) => _navigator.currentState!.pop(),
-          child: Navigator(
-            key: _navigator,
-            onGenerateRoute: (_) =>
-                MaterialPageRoute<void>(builder: (_) => const LibraryPage()),
+        child: ShareReceiverListener(
+          child: NavigatorPopHandler<void>(
+            onPopWithResult: (_) => _navigator.currentState!.pop(),
+            child: Navigator(
+              key: _navigator,
+              onGenerateRoute: (_) =>
+                  MaterialPageRoute<void>(builder: (_) => const LibraryPage()),
+            ),
           ),
         ),
       ),
