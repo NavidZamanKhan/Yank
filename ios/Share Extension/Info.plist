@@ -17,11 +17,11 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>AppGroupId</key>
-	<string>group.$(PRODUCT_BUNDLE_IDENTIFIER:withextension=)</string>
+	<string>group.com.example.yank</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>
