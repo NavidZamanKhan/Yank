@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,7 +20,7 @@ class ItemActions extends StatelessWidget {
   final VoidCallback? onPreview;
   @override
   Widget build(BuildContext context) => PopupMenuButton<ItemMenuAction>(
-    tooltip: 'Actions for ${item.title}',
+    tooltip: 'Actions for ${item.displayTitle}',
     icon: Icon(
       LucideIcons.ellipsisVertical,
       size: 17,
@@ -39,7 +41,7 @@ class ItemActions extends StatelessWidget {
             await Clipboard.setData(
               ClipboardData(
                 text:
-                    item.url ?? (item.body.isNotEmpty ? item.body : item.title),
+                    item.url ?? (item.body.isNotEmpty ? item.body : item.displayTitle),
               ),
             );
             if (context.mounted) {
@@ -56,14 +58,32 @@ class ItemActions extends StatelessWidget {
         case ItemMenuAction.share:
           try {
             final box = context.findRenderObject() as RenderBox?;
-            await SharePlus.instance.share(
-              ShareParams(
-                text: '${item.title}\n${item.url ?? item.body}',
-                sharePositionOrigin: box == null
-                    ? null
-                    : box.localToGlobal(Offset.zero) & box.size,
-              ),
-            );
+            final origin = box == null
+                ? null
+                : box.localToGlobal(Offset.zero) & box.size;
+
+            final localPath = item.url ?? item.artwork ?? item.audioAsset;
+            final cleanPath = localPath != null
+                ? localPath.replaceFirst(RegExp(r'^file://'), '')
+                : null;
+            final localFile = cleanPath != null ? File(cleanPath) : null;
+
+            if (localFile != null && localFile.existsSync()) {
+              await SharePlus.instance.share(
+                ShareParams(
+                  files: [XFile(localFile.path, name: item.displayTitle)],
+                  title: item.displayTitle,
+                  sharePositionOrigin: origin,
+                ),
+              );
+            } else {
+              await SharePlus.instance.share(
+                ShareParams(
+                  text: '${item.displayTitle}\n${item.url ?? item.body}',
+                  sharePositionOrigin: origin,
+                ),
+              );
+            }
           } catch (_) {
             if (context.mounted) {
               showMessage(

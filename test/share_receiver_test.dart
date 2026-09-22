@@ -249,6 +249,14 @@ void main() {
 
       expect(
         ShareReceiverService.extractCleanTitle(
+          '/data/user/0/com.example.yank/cache/shares/e10623ba-ea7f-4dd9-b3e5-4b5682d14f8a_yank-release.apk',
+          fallback: 'Document',
+        ),
+        'yank-release.apk',
+      );
+
+      expect(
+        ShareReceiverService.extractCleanTitle(
           '/path/to/3D618713-2442-493A-A6C5-3F701F8FD160.png',
           fallback: 'Photo',
         ),
@@ -262,6 +270,32 @@ void main() {
         ),
         'notes.pdf',
       );
+    });
+
+    test('YankItem.displayTitle strips 36-char UUID and item id prefixes from title', () {
+      final item1 = YankItem(
+        id: '1',
+        kind: ItemKind.file,
+        title: 'e10623ba-ea7f-4dd9-b3e5-4b5682d14f8a_yank-release.apk',
+        createdAt: DateTime(2026, 9, 23),
+      );
+      expect(item1.displayTitle, 'yank-release.apk');
+
+      final item2 = YankItem(
+        id: '2',
+        kind: ItemKind.file,
+        title: 'share-1727031200000-0-report.pdf',
+        createdAt: DateTime(2026, 9, 23),
+      );
+      expect(item2.displayTitle, 'report.pdf');
+
+      final item3 = YankItem(
+        id: '3',
+        kind: ItemKind.text,
+        title: 'Clean note title',
+        createdAt: DateTime(2026, 9, 23),
+      );
+      expect(item3.displayTitle, 'Clean note title');
     });
 
     test('persistFileLocally cleans up temporary file if inside AppGroup container', () async {

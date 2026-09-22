@@ -1,15 +1,21 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yank/core/theme/yank_theme.dart';
 import 'package:yank/core/utils/formatters.dart';
 import 'package:yank/core/widgets/yank_controls.dart';
+import 'package:yank/core/widgets/yank_feedback.dart';
 import 'package:yank/features/audio/widgets/audio_controls.dart';
 import 'package:yank/features/library/bloc/library_bloc.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/widgets/item_actions.dart';
 import 'package:yank/features/library/widgets/poster_artwork.dart';
+import 'package:yank/features/preview/views/fullscreen_photo_viewer.dart';
 
 Future<void> showItemPreview(
   BuildContext context,
@@ -62,7 +68,7 @@ class ItemPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SheetHeading(
-            title: item.title,
+            title: item.displayTitle,
             subtitle:
                 '${item.kind == ItemKind.link ? item.domain : item.kind.label} · ${timeAgo(item.createdAt)}',
             onClose: onClose,
@@ -81,19 +87,7 @@ class ItemPreview extends StatelessWidget {
                     )
                   else
                     switch (item.kind) {
-                      ItemKind.photo => ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: AspectRatio(
-                          aspectRatio: 4 / 3,
-                          child: InteractiveViewer(
-                            minScale: 1,
-                            maxScale: 4,
-                            child: PosterArtwork(
-                              variant: item.artwork ?? 'slow',
-                            ),
-                          ),
-                        ),
-                      ),
+                      ItemKind.photo => _PhotoPreview(item: item),
                       ItemKind.audio => Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -242,41 +236,295 @@ class _DownloadPanel extends StatelessWidget {
   }
 }
 
+class _PhotoPreview extends StatelessWidget {
+  const _PhotoPreview({required this.item});
+  final YankItem item;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      GestureDetector(
+        onTap: () => FullscreenPhotoViewer.open(context, item),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: PosterArtwork(
+                  variant: item.artwork ?? 'slow',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withAlpha(160),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.expand, size: 14, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text(
+                      'Tap to expand',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => FullscreenPhotoViewer.open(context, item),
+              icon: const Icon(LucideIcons.maximize2, size: 16),
+              label: const Text('Open'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          OutlinedButton.icon(
+            onPressed: () => _shareLocalFile(context, item),
+            icon: const Icon(LucideIcons.share2, size: 16),
+            label: const Text('Share'),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 class _DocumentPreview extends StatelessWidget {
   const _DocumentPreview({required this.item});
   final YankItem item;
+
+  IconData _getFileIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.apk')) return LucideIcons.package;
+    if (lower.endsWith('.pdf')) return LucideIcons.fileText;
+    if (lower.endsWith('.zip') ||
+        lower.endsWith('.tar') ||
+        lower.endsWith('.gz') ||
+        lower.endsWith('.rar')) {
+      return LucideIcons.fileArchive;
+    }
+    if (lower.endsWith('.dart') ||
+        lower.endsWith('.js') ||
+        lower.endsWith('.ts') ||
+        lower.endsWith('.py') ||
+        lower.endsWith('.json') ||
+        lower.endsWith('.html')) {
+      return LucideIcons.fileCode;
+    }
+    if (lower.endsWith('.mp3') ||
+        lower.endsWith('.wav') ||
+        lower.endsWith('.m4a') ||
+        lower.endsWith('.aac')) {
+      return LucideIcons.fileAudio;
+    }
+    if (lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi')) {
+      return LucideIcons.fileVideo;
+    }
+    return LucideIcons.file;
+  }
+
+  String _getExtensionBadge(String name) {
+    final dot = name.lastIndexOf('.');
+    if (dot != -1 && dot < name.length - 1) {
+      return name.substring(dot + 1).toUpperCase();
+    }
+    return 'FILE';
+  }
+
   @override
-  Widget build(BuildContext context) => SelectionArea(
-    child: Container(
+  Widget build(BuildContext context) {
+    final title = item.displayTitle;
+    final badge = _getExtensionBadge(title);
+    final icon = _getFileIcon(title);
+
+    return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: context.colors.surface,
         border: Border.all(color: context.colors.line),
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 23, vertical: 30),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'YANK / NOTES',
-            style: TextStyle(
-              color: context.colors.iris,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: context.colors.iris.withAlpha(25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: context.colors.iris, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: context.colors.line,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            badge,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.ink,
+                            ),
+                          ),
+                        ),
+                        if (item.sizeBytes > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            fileSize(item.sizeBytes),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text(
-            item.body,
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(height: 1.8),
+          if (item.body.isNotEmpty &&
+              item.body != item.title &&
+              item.body != item.displayTitle &&
+              !item.body.startsWith('/') &&
+              !item.body.startsWith('file://')) ...[
+            const SizedBox(height: 16),
+            Text(
+              item.body,
+              style:
+                  Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _openFile(context, item),
+                  icon: const Icon(LucideIcons.externalLink, size: 16),
+                  label: const Text('Open'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: () => _shareLocalFile(context, item),
+                icon: const Icon(LucideIcons.share2, size: 16),
+                label: const Text('Share'),
+              ),
+            ],
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+}
+
+Future<void> _openFile(BuildContext context, YankItem item) async {
+  final path = item.url ?? item.body;
+  if (path.isEmpty) {
+    showMessage(context, 'No file path found.');
+    return;
+  }
+  final cleanPath = path.replaceFirst(RegExp(r'^file://'), '');
+  final file = File(cleanPath);
+  if (!file.existsSync()) {
+    showMessage(context, 'This file is not currently stored on this device.');
+    return;
+  }
+
+  // 1. Try launching file directly via launchUrl (works on macOS and iOS for supported files)
+  try {
+    final opened = await launchUrl(
+      Uri.file(file.path),
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened) return;
+  } catch (_) {}
+
+  // 2. Cross-platform universal launcher: open via native share/action sheet
+  try {
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, name: item.displayTitle)],
+        title: item.displayTitle,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
+  } catch (e) {
+    if (context.mounted) {
+      showMessage(context, 'Could not open file: $e');
+    }
+  }
+}
+
+Future<void> _shareLocalFile(BuildContext context, YankItem item) async {
+  final path = item.url ?? item.artwork ?? item.audioAsset ?? item.body;
+  if (path.isEmpty) return;
+  final cleanPath = path.replaceFirst(RegExp(r'^file://'), '');
+  final file = File(cleanPath);
+  if (file.existsSync()) {
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, name: item.displayTitle)],
+        title: item.displayTitle,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
+  } else {
+    await SharePlus.instance.share(
+      ShareParams(text: '${item.displayTitle}\n$path'),
+    );
+  }
 }
 
 class _LinkPreview extends StatelessWidget {

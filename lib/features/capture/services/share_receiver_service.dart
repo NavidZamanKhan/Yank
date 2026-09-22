@@ -288,6 +288,13 @@ class ShareReceiverService with WidgetsBindingObserver {
 
     final fileName = rawPath.split('/').last;
 
+    final cleanMessage = file.message?.trim();
+    final hasOriginalName = cleanMessage != null &&
+        cleanMessage.isNotEmpty &&
+        !cleanMessage.startsWith('share-') &&
+        !cleanMessage.contains('/');
+    final preferredTitleSource = hasOriginalName ? cleanMessage : rawPath;
+
     // Check for photo/image
     final isImage = file.type == SharedMediaType.image ||
         mime.startsWith('image/') ||
@@ -300,7 +307,7 @@ class ShareReceiverService with WidgetsBindingObserver {
         lowerPath.endsWith('.heif');
 
     if (isImage) {
-      final title = extractCleanTitle(rawPath, fallback: 'Photo');
+      final title = extractCleanTitle(preferredTitleSource, fallback: 'Photo');
       return YankItem(
         id: id,
         kind: ItemKind.photo,
@@ -322,7 +329,7 @@ class ShareReceiverService with WidgetsBindingObserver {
         lowerPath.endsWith('.ogg');
 
     if (isAudio) {
-      final title = extractCleanTitle(rawPath, fallback: 'Audio Track');
+      final title = extractCleanTitle(preferredTitleSource, fallback: 'Audio Track');
       return YankItem(
         id: id,
         kind: ItemKind.audio,
@@ -335,7 +342,7 @@ class ShareReceiverService with WidgetsBindingObserver {
     }
 
     // Generic document or file
-    final title = extractCleanTitle(rawPath, fallback: 'Document');
+    final title = extractCleanTitle(preferredTitleSource, fallback: 'Document');
     return YankItem(
       id: id,
       kind: ItemKind.file,
@@ -349,9 +356,13 @@ class ShareReceiverService with WidgetsBindingObserver {
 
   static String extractCleanTitle(String rawPath, {String fallback = 'Document'}) {
     final fileName = rawPath.split(Platform.pathSeparator).last.split('/').last;
-    final withoutPrefix = fileName.replaceFirst(RegExp(r'^[0-9a-fA-F]{8}_'), '');
+    final withoutPrefix = fileName
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_'), '')
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{32}_'), '')
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}_'), '')
+        .replaceFirst(RegExp(r'^share-\d+-\d+-'), '');
     final isUuidOnly = RegExp(
-      r'^[0-9a-fA-F-]{8,}\.(png|jpg|jpeg|heic|heif|webp|gif|mp3|m4a|wav|pdf|txt)$',
+      r'^[0-9a-fA-F-]{8,}\.(png|jpg|jpeg|heic|heif|webp|gif|mp3|m4a|wav|pdf|txt|apk)$',
       caseSensitive: false,
     ).hasMatch(withoutPrefix);
     if (isUuidOnly || withoutPrefix.isEmpty) {
@@ -412,6 +423,13 @@ class ShareReceiverService with WidgetsBindingObserver {
 
     final fileName = rawPath.split('/').last;
 
+    final cleanMessage = file.message?.trim();
+    final hasOriginalName = cleanMessage != null &&
+        cleanMessage.isNotEmpty &&
+        !cleanMessage.startsWith('share-') &&
+        !cleanMessage.contains('/');
+    final preferredTitleSource = hasOriginalName ? cleanMessage : rawPath;
+
     final isImage = file.type == SharedMediaType.image ||
         mime.startsWith('image/') ||
         lowerPath.endsWith('.jpg') ||
@@ -423,7 +441,7 @@ class ShareReceiverService with WidgetsBindingObserver {
         lowerPath.endsWith('.heif');
 
     if (isImage) {
-      final title = extractCleanTitle(rawPath, fallback: 'Photo');
+      final title = extractCleanTitle(preferredTitleSource, fallback: 'Photo');
       return YankItem(
         id: id,
         kind: ItemKind.photo,
@@ -444,7 +462,7 @@ class ShareReceiverService with WidgetsBindingObserver {
         lowerPath.endsWith('.ogg');
 
     if (isAudio) {
-      final title = extractCleanTitle(rawPath, fallback: 'Audio Track');
+      final title = extractCleanTitle(preferredTitleSource, fallback: 'Audio Track');
       return YankItem(
         id: id,
         kind: ItemKind.audio,
@@ -456,7 +474,7 @@ class ShareReceiverService with WidgetsBindingObserver {
       );
     }
 
-    final title = extractCleanTitle(rawPath, fallback: 'Document');
+    final title = extractCleanTitle(preferredTitleSource, fallback: 'Document');
     return YankItem(
       id: id,
       kind: ItemKind.file,

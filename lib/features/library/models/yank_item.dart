@@ -47,6 +47,14 @@ class YankItem {
   final bool archived;
   final bool deleted;
   bool get isYanked => yankedAt != null;
+  String get displayTitle {
+    final withoutPrefix = title
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_'), '')
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{32}_'), '')
+        .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}_'), '')
+        .replaceFirst(RegExp(r'^share-\d+-\d+-'), '');
+    return withoutPrefix.isNotEmpty ? withoutPrefix : title;
+  }
   String get domain => url == null
       ? ''
       : (Uri.tryParse(url!)?.host ?? '').replaceFirst(RegExp(r'^www\.'), '');
