@@ -17,6 +17,14 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    if (project.name == "file_picker") {
+        project.plugins.apply("org.jetbrains.kotlin.android")
+    }
+    project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java).configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

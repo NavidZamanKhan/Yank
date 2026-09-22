@@ -75,8 +75,8 @@ class ShareReceiverService with WidgetsBindingObserver {
       do {
         _needsAnotherCheck = false;
 
-        // 1. Direct App Group extraction for iOS
-        if (!kIsWeb && Platform.isIOS) {
+        // 1. Direct background queue extraction for iOS and Android
+        if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
           try {
             final jsonStr = await nativeChannel.invokeMethod<String>('getPendingShares');
             if (jsonStr != null && jsonStr.isNotEmpty) {
@@ -205,10 +205,12 @@ class ShareReceiverService with WidgetsBindingObserver {
       // Direct disk-to-disk streaming to adhere to Yank $0 / memory safety constraints
       await src.openRead().pipe(dest.openWrite());
 
-      // If the source file is in the shared App Group container, clean it up to prevent disk bloat (Rule 12)
+      // If the source file is in the temporary share buffer (iOS App Group or Android shares cache),
+      // clean it up to prevent disk bloat (Rule 12)
       if (src.path != dest.path &&
           (sourcePath.contains('AppGroup') ||
-              sourcePath.contains('group.com.example.yank'))) {
+              sourcePath.contains('group.com.example.yank') ||
+              sourcePath.contains('/shares/'))) {
         try {
           if (src.existsSync()) {
             await src.delete();

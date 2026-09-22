@@ -283,6 +283,26 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
+    test('persistFileLocally cleans up temporary file if inside Android /shares/ cache', () async {
+      final tempDir = Directory.systemTemp.createTempSync('yank_android_shares_test_');
+      final sharesDir = Directory('${tempDir.path}/shares')..createSync();
+      final sourceFile = File('${sharesDir.path}/uuid_captured_image.png');
+      await sourceFile.writeAsString('bytes in android cache shares');
+
+      final targetDir = Directory('${tempDir.path}/captures');
+      final persistedPath = await ShareReceiverService.persistFileLocally(
+        sourcePath: sourceFile.path,
+        itemId: 'item-android-1',
+        targetDirectory: targetDir,
+      );
+
+      expect(File(persistedPath).existsSync(), isTrue);
+      // Source file in android shares cache must be cleaned up to prevent disk bloat (Rule 12)
+      expect(sourceFile.existsSync(), isFalse);
+
+      tempDir.deleteSync(recursive: true);
+    });
+
     test('ingests pending shares when app resumes from background (didChangeAppLifecycleState)', () async {
       ReceiveSharingIntent.setMockValues(
         initialMedia: [],
@@ -361,6 +381,39 @@ void main() {
     test('parseSharedMediaJson handles empty and malformed json gracefully', () {
       expect(ShareReceiverService.parseSharedMediaJson(''), isEmpty);
       expect(ShareReceiverService.parseSharedMediaJson('{not a valid json array}'), isEmpty);
+    });
+
+    test('parseSharedMediaJson parses Android background share JSON with multiple types', () {
+      const androidJson = '''
+      [
+        {
+          "path": "/data/user/0/com.example.yank/cache/shares/UUID_song.mp3",
+          "mimeType": "audio/mpeg",
+          "thumbnail": null,
+          "duration": null,
+          "message": "song.mp3",
+          "type": "file"
+        },
+        {
+          "path": "/data/user/0/com.example.yank/cache/shares/UUID_clip.mp4",
+          "mimeType": "video/mp4",
+          "thumbnail": null,
+          "duration": null,
+          "message": "clip.mp4",
+          "type": "video"
+        }
+      ]
+      ''';
+
+      final files = ShareReceiverService.parseSharedMediaJson(androidJson);
+      expect(files.length, 2);
+      expect(files[0].type, SharedMediaType.file);
+      expect(files[0].mimeType, 'audio/mpeg');
+      expect(files[0].message, 'song.mp3');
+
+      expect(files[1].type, SharedMediaType.video);
+      expect(files[1].mimeType, 'video/mp4');
+      expect(files[1].message, 'clip.mp4');
     });
   });
 }
