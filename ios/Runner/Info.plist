@@ -72,6 +72,8 @@
 	<string>Yank needs access to your camera to take and capture photos.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Yank needs access to your microphone to capture audio recordings.</string>
+	<key>AppGroupId</key>
+	<string>group.$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -80,6 +82,14 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.106375247397-ebkdgl12fclqb32bgamd2nnjqb063t29</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ShareMedia-$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			</array>
 		</dict>
 	</array>
