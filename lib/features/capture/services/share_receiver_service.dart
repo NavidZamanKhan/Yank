@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
@@ -10,27 +11,36 @@ import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
 
-class ShareReceiverService {
+class ShareReceiverService with WidgetsBindingObserver {
   ShareReceiverService({
     required this.repository,
     required this.libraryBloc,
     ReceiveSharingIntent? sharingIntent,
     this.targetDirectory,
-  }) : _sharingIntent = sharingIntent ?? ReceiveSharingIntent.instance;
+  }) : _customSharingIntent = sharingIntent;
 
   final LibraryRepository repository;
   final LibraryBloc libraryBloc;
-  final ReceiveSharingIntent _sharingIntent;
+  final ReceiveSharingIntent? _customSharingIntent;
   final Directory? targetDirectory;
+
+  ReceiveSharingIntent get _sharingIntent =>
+      _customSharingIntent ?? ReceiveSharingIntent.instance;
 
   StreamSubscription<List<SharedMediaFile>>? _intentDataStreamSubscription;
   bool _initialized = false;
+  bool _isProcessing = false;
+  bool _needsAnotherCheck = false;
 
   void initialize() {
     if (_initialized) return;
     _initialized = true;
 
-    // Listen to media sharing while the app is in memory (warm resume)
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {}
+
+    // Listen to media sharing while the app is in memory
     _intentDataStreamSubscription = _sharingIntent.getMediaStream().listen(
       _handleSharedMedia,
       onError: (err) {
@@ -38,15 +48,37 @@ class ShareReceiverService {
       },
     );
 
-    // Get the media sharing when the app is brought from closed state (cold start)
-    _sharingIntent.getInitialMedia().then((files) async {
-      if (files.isNotEmpty) {
-        final filesCopy = List<SharedMediaFile>.from(files);
-        await _handleSharedMedia(filesCopy);
-      }
-    }).catchError((err) {
-      debugPrint('ShareReceiverService getInitialMedia error: $err');
-    });
+    // Initial check for pending shares on startup
+    checkForPendingShares();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      checkForPendingShares();
+    }
+  }
+
+  Future<void> checkForPendingShares() async {
+    if (_isProcessing) {
+      _needsAnotherCheck = true;
+      return;
+    }
+    _isProcessing = true;
+    try {
+      do {
+        _needsAnotherCheck = false;
+        final files = await _sharingIntent.getInitialMedia();
+        if (files.isNotEmpty) {
+          final filesCopy = List<SharedMediaFile>.from(files);
+          await _handleSharedMedia(filesCopy);
+        }
+      } while (_needsAnotherCheck);
+    } catch (err) {
+      debugPrint('ShareReceiverService checkForPendingShares error: $err');
+    } finally {
+      _isProcessing = false;
+    }
   }
 
   Future<void> _handleSharedMedia(List<SharedMediaFile> files) async {
@@ -122,6 +154,18 @@ class ShareReceiverService {
 
       // Direct disk-to-disk streaming to adhere to Yank $0 / memory safety constraints
       await src.openRead().pipe(dest.openWrite());
+
+      // If the source file is in the shared App Group container, clean it up to prevent disk bloat (Rule 12)
+      if (src.path != dest.path &&
+          (sourcePath.contains('AppGroup') ||
+              sourcePath.contains('group.com.example.yank'))) {
+        try {
+          if (src.existsSync()) {
+            await src.delete();
+          }
+        } catch (_) {}
+      }
+
       return dest.path;
     } catch (e) {
       debugPrint('ShareReceiverService persistFileLocally error: $e');
@@ -204,7 +248,7 @@ class ShareReceiverService {
         lowerPath.endsWith('.heif');
 
     if (isImage) {
-      final title = fileName.isNotEmpty ? fileName : 'Photo';
+      final title = extractCleanTitle(rawPath, fallback: 'Photo');
       return YankItem(
         id: id,
         kind: ItemKind.photo,
@@ -226,7 +270,7 @@ class ShareReceiverService {
         lowerPath.endsWith('.ogg');
 
     if (isAudio) {
-      final title = fileName.isNotEmpty ? fileName : 'Audio Track';
+      final title = extractCleanTitle(rawPath, fallback: 'Audio Track');
       return YankItem(
         id: id,
         kind: ItemKind.audio,
@@ -239,7 +283,7 @@ class ShareReceiverService {
     }
 
     // Generic document or file
-    final title = fileName.isNotEmpty ? fileName : 'Document';
+    final title = extractCleanTitle(rawPath, fallback: 'Document');
     return YankItem(
       id: id,
       kind: ItemKind.file,
@@ -249,6 +293,19 @@ class ShareReceiverService {
       body: file.message ?? fileName,
       sizeBytes: sizeBytes ?? 0,
     );
+  }
+
+  static String extractCleanTitle(String rawPath, {String fallback = 'Document'}) {
+    final fileName = rawPath.split(Platform.pathSeparator).last.split('/').last;
+    final withoutPrefix = fileName.replaceFirst(RegExp(r'^[0-9a-fA-F]{8}_'), '');
+    final isUuidOnly = RegExp(
+      r'^[0-9a-fA-F-]{8,}\.(png|jpg|jpeg|heic|heif|webp|gif|mp3|m4a|wav|pdf|txt)$',
+      caseSensitive: false,
+    ).hasMatch(withoutPrefix);
+    if (isUuidOnly || withoutPrefix.isEmpty) {
+      return fallback;
+    }
+    return withoutPrefix;
   }
 
   static YankItem classifyAndBuildItem({
@@ -314,7 +371,7 @@ class ShareReceiverService {
         lowerPath.endsWith('.heif');
 
     if (isImage) {
-      final title = fileName.isNotEmpty ? fileName : 'Photo';
+      final title = extractCleanTitle(rawPath, fallback: 'Photo');
       return YankItem(
         id: id,
         kind: ItemKind.photo,
@@ -335,7 +392,7 @@ class ShareReceiverService {
         lowerPath.endsWith('.ogg');
 
     if (isAudio) {
-      final title = fileName.isNotEmpty ? fileName : 'Audio Track';
+      final title = extractCleanTitle(rawPath, fallback: 'Audio Track');
       return YankItem(
         id: id,
         kind: ItemKind.audio,
@@ -347,7 +404,7 @@ class ShareReceiverService {
       );
     }
 
-    final title = fileName.isNotEmpty ? fileName : 'Document';
+    final title = extractCleanTitle(rawPath, fallback: 'Document');
     return YankItem(
       id: id,
       kind: ItemKind.file,
@@ -360,6 +417,9 @@ class ShareReceiverService {
   }
 
   void dispose() {
+    try {
+      WidgetsBinding.instance.removeObserver(this);
+    } catch (_) {}
     _intentDataStreamSubscription?.cancel();
     _intentDataStreamSubscription = null;
     _initialized = false;

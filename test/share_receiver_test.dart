@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
@@ -235,6 +236,93 @@ void main() {
       expect(item.sizeBytes, 'audio recording payload'.length);
 
       tempDir.deleteSync(recursive: true);
+    });
+
+    test('extractCleanTitle removes UUID prefixes and formats UUID-only filenames as fallback', () {
+      expect(
+        ShareReceiverService.extractCleanTitle(
+          '/path/to/a1b2c3d4_my_vacation.jpg',
+          fallback: 'Photo',
+        ),
+        'my_vacation.jpg',
+      );
+
+      expect(
+        ShareReceiverService.extractCleanTitle(
+          '/path/to/3D618713-2442-493A-A6C5-3F701F8FD160.png',
+          fallback: 'Photo',
+        ),
+        'Photo',
+      );
+
+      expect(
+        ShareReceiverService.extractCleanTitle(
+          '/path/to/notes.pdf',
+          fallback: 'Document',
+        ),
+        'notes.pdf',
+      );
+    });
+
+    test('persistFileLocally cleans up temporary file if inside AppGroup container', () async {
+      final tempDir = Directory.systemTemp.createTempSync('yank_group.com.example.yank_test_');
+      final sourceFile = File('${tempDir.path}/shared_appgroup_photo.jpg');
+      await sourceFile.writeAsString('bytes in appgroup container');
+
+      final targetDir = Directory('${tempDir.path}/captures');
+      final persistedPath = await ShareReceiverService.persistFileLocally(
+        sourcePath: sourceFile.path,
+        itemId: 'item-ag-1',
+        targetDirectory: targetDir,
+      );
+
+      expect(File(persistedPath).existsSync(), isTrue);
+      // Source file in group container must be cleaned up to prevent disk bloat
+      expect(sourceFile.existsSync(), isFalse);
+
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('ingests pending shares when app resumes from background (didChangeAppLifecycleState)', () async {
+      ReceiveSharingIntent.setMockValues(
+        initialMedia: [],
+        mediaStream: streamController.stream,
+      );
+
+      final service = ShareReceiverService(
+        repository: repo,
+        libraryBloc: bloc,
+      );
+      service.initialize();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final initialCount = repo.items.length;
+
+      // Simulate user sharing a photo in background while Yank is in background
+      ReceiveSharingIntent.setMockValues(
+        initialMedia: [
+          SharedMediaFile(
+            path: 'https://github.com',
+            type: SharedMediaType.url,
+          ),
+        ],
+        mediaStream: streamController.stream,
+      );
+
+      final noticeFuture = bloc.stream.firstWhere((s) => s.notice != null);
+
+      // Simulate app resuming to foreground
+      service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+
+      await noticeFuture;
+
+      expect(repo.items.length, initialCount + 1);
+      final captured = repo.items.firstWhere((i) => i.url == 'https://github.com');
+      expect(captured.kind, ItemKind.link);
+      expect(captured.title, 'github.com');
+      expect(bloc.state.notice?.message, contains('Captured to Yank: github.com'));
+
+      service.dispose();
     });
   });
 }

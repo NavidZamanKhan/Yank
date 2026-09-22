@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 
 private let kUserDefaultsKey = "ShareKey"
 private let kUserDefaultsMessageKey = "ShareMessageKey"
-private let kSchemePrefix = "ShareMedia"
 private let kAppGroupIdKey = "AppGroupId"
 
 enum SharedMediaType: String, Codable, CaseIterable {
@@ -135,7 +134,7 @@ class ShareViewController: UIViewController {
         }
 
         dispatchGroup.notify(queue: .main) { [weak self] in
-            self?.saveAndRedirect()
+            self?.saveAndComplete()
         }
     }
 
@@ -189,8 +188,9 @@ class ShareViewController: UIViewController {
 
     private func copyToSharedContainer(url: URL) -> String? {
         guard let container = sharedContainerURL() else { return nil }
-        let fileName = url.lastPathComponent.isEmpty ? UUID().uuidString : url.lastPathComponent
-        let destination = container.appendingPathComponent(fileName)
+        let baseName = url.lastPathComponent.isEmpty ? "file" : url.lastPathComponent
+        let uniqueName = "\(UUID().uuidString.prefix(8))_\(baseName)"
+        let destination = container.appendingPathComponent(uniqueName)
 
         do {
             if FileManager.default.fileExists(atPath: destination.path) {
@@ -250,48 +250,29 @@ class ShareViewController: UIViewController {
         return (nil, duration)
     }
 
-    private func saveAndRedirect() {
+    private func saveAndComplete() {
         guard !sharedMedia.isEmpty else {
             extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             return
         }
 
         let userDefaults = UserDefaults(suiteName: appGroupId)
-        if let encoded = try? JSONEncoder().encode(sharedMedia) {
+        var cumulativeMedia = [SharedMediaFile]()
+
+        // Accumulate unread shares if user shared multiple items before opening Yank
+        if let existingData = userDefaults?.data(forKey: kUserDefaultsKey),
+           let existingMedia = try? JSONDecoder().decode([SharedMediaFile].self, from: existingData) {
+            cumulativeMedia.append(contentsOf: existingMedia)
+        }
+
+        cumulativeMedia.append(contentsOf: sharedMedia)
+
+        if let encoded = try? JSONEncoder().encode(cumulativeMedia) {
             userDefaults?.set(encoded, forKey: kUserDefaultsKey)
             userDefaults?.synchronize()
         }
 
-        redirectToHostApp()
-    }
-
-    private func redirectToHostApp() {
-        let urlString = "\(kSchemePrefix)-\(hostAppBundleIdentifier):share"
-        guard let url = URL(string: urlString) else {
-            extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-            return
-        }
-
-        var responder: UIResponder? = self
-        if #available(iOS 18.0, *) {
-            while responder != nil {
-                if let application = responder as? UIApplication {
-                    application.open(url, options: [:], completionHandler: nil)
-                    break
-                }
-                responder = responder?.next
-            }
-        } else {
-            let selectorOpenURL = sel_registerName("openURL:")
-            while responder != nil {
-                if responder?.responds(to: selectorOpenURL) == true {
-                    _ = responder?.perform(selectorOpenURL, with: url)
-                    break
-                }
-                responder = responder?.next
-            }
-        }
-
+        // Complete the extension silently without launching or foregrounding the host app
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 }
