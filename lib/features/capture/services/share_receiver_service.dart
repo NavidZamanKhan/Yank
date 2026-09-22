@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -17,12 +19,16 @@ class ShareReceiverService with WidgetsBindingObserver {
     required this.libraryBloc,
     ReceiveSharingIntent? sharingIntent,
     this.targetDirectory,
-  }) : _customSharingIntent = sharingIntent;
+    MethodChannel? nativeChannel,
+  })  : _customSharingIntent = sharingIntent,
+        nativeChannel = nativeChannel ??
+            const MethodChannel('com.example.yank/share_receiver');
 
   final LibraryRepository repository;
   final LibraryBloc libraryBloc;
   final ReceiveSharingIntent? _customSharingIntent;
   final Directory? targetDirectory;
+  final MethodChannel nativeChannel;
 
   ReceiveSharingIntent get _sharingIntent =>
       _customSharingIntent ?? ReceiveSharingIntent.instance;
@@ -68,6 +74,24 @@ class ShareReceiverService with WidgetsBindingObserver {
     try {
       do {
         _needsAnotherCheck = false;
+
+        // 1. Direct App Group extraction for iOS
+        if (!kIsWeb && Platform.isIOS) {
+          try {
+            final jsonStr = await nativeChannel.invokeMethod<String>('getPendingShares');
+            if (jsonStr != null && jsonStr.isNotEmpty) {
+              final files = parseSharedMediaJson(jsonStr);
+              if (files.isNotEmpty) {
+                await _handleSharedMedia(files);
+                await nativeChannel.invokeMethod<bool>('clearPendingShares');
+              }
+            }
+          } catch (e) {
+            debugPrint('ShareReceiverService nativeChannel error: $e');
+          }
+        }
+
+        // 2. Standard sharing intent (Android & fallback)
         final files = await _sharingIntent.getInitialMedia();
         if (files.isNotEmpty) {
           final filesCopy = List<SharedMediaFile>.from(files);
@@ -78,6 +102,32 @@ class ShareReceiverService with WidgetsBindingObserver {
       debugPrint('ShareReceiverService checkForPendingShares error: $err');
     } finally {
       _isProcessing = false;
+    }
+  }
+
+  static List<SharedMediaFile> parseSharedMediaJson(String jsonStr) {
+    if (jsonStr.isEmpty) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonStr);
+      return decoded.map((e) {
+        final map = e as Map<String, dynamic>;
+        final typeStr = map['type'] as String?;
+        final type = SharedMediaType.values.firstWhere(
+          (t) => t.name == typeStr,
+          orElse: () => SharedMediaType.file,
+        );
+        return SharedMediaFile(
+          path: map['path'] as String,
+          mimeType: map['mimeType'] as String?,
+          thumbnail: map['thumbnail'] as String?,
+          duration: (map['duration'] as num?)?.toInt(),
+          message: map['message'] as String?,
+          type: type,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('ShareReceiverService parseSharedMediaJson error: $e');
+      return [];
     }
   }
 

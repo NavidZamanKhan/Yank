@@ -272,8 +272,94 @@ class ShareViewController: UIViewController {
             userDefaults?.synchronize()
         }
 
-        // Complete the extension silently without launching or foregrounding the host app
-        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        // Show native Yanked HUD, then complete the extension silently
+        showYankedToast { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        }
+    }
+
+    private func showYankedToast(completion: @escaping () -> Void) {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.backgroundColor = .clear
+        container.alpha = 0
+        container.transform = CGAffineTransform(scaleX: 0.85, y: 0.85)
+
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.layer.cornerRadius = 24
+        blurView.layer.masksToBounds = true
+        blurView.layer.borderWidth = 1.0
+        blurView.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
+
+        let stack = UIStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.axis = .horizontal
+        stack.spacing = 10
+        stack.alignment = .center
+
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 20, weight: .bold)
+        let checkmark = UIImageView(image: UIImage(systemName: "checkmark.circle.fill", withConfiguration: iconConfig))
+        checkmark.tintColor = UIColor(red: 0.30, green: 0.85, blue: 0.50, alpha: 1.0)
+        checkmark.setContentHuggingPriority(.required, for: .horizontal)
+
+        let label = UILabel()
+        label.text = "Yanked"
+        label.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .white
+        label.setContentHuggingPriority(.required, for: .horizontal)
+
+        stack.addArrangedSubview(checkmark)
+        stack.addArrangedSubview(label)
+
+        blurView.contentView.addSubview(stack)
+        container.addSubview(blurView)
+        view.addSubview(container)
+
+        NSLayoutConstraint.activate([
+            container.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            container.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+
+            blurView.topAnchor.constraint(equalTo: container.topAnchor),
+            blurView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            blurView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            stack.topAnchor.constraint(equalTo: blurView.contentView.topAnchor, constant: 14),
+            stack.bottomAnchor.constraint(equalTo: blurView.contentView.bottomAnchor, constant: -14),
+            stack.leadingAnchor.constraint(equalTo: blurView.contentView.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: blurView.contentView.trailingAnchor, constant: -20),
+        ])
+
+        // Animate toast in with a spring
+        UIView.animate(
+            withDuration: 0.28,
+            delay: 0,
+            usingSpringWithDamping: 0.72,
+            initialSpringVelocity: 0.5,
+            options: [.curveEaseOut],
+            animations: {
+                container.alpha = 1.0
+                container.transform = .identity
+            }
+        )
+
+        // Hold briefly so user sees the confirmation, then smoothly dismiss
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+            UIView.animate(
+                withDuration: 0.22,
+                delay: 0,
+                options: [.curveEaseIn],
+                animations: {
+                    container.alpha = 0.0
+                    container.transform = CGAffineTransform(scaleX: 0.88, y: 0.88)
+                },
+                completion: { _ in
+                    completion()
+                }
+            )
+        }
     }
 }
 

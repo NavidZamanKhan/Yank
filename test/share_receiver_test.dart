@@ -324,5 +324,43 @@ void main() {
 
       service.dispose();
     });
+
+    test('parseSharedMediaJson parses App Group JSON payload accurately', () {
+      const sampleJson = '''
+      [
+        {
+          "path": "/private/var/mobile/Containers/Shared/AppGroup/UUID/photo.jpg",
+          "mimeType": "image/jpeg",
+          "thumbnail": null,
+          "duration": null,
+          "message": "Vacation picture",
+          "type": "image"
+        },
+        {
+          "path": "https://yank.app",
+          "mimeType": "text/plain",
+          "thumbnail": null,
+          "duration": null,
+          "message": null,
+          "type": "url"
+        }
+      ]
+      ''';
+
+      final files = ShareReceiverService.parseSharedMediaJson(sampleJson);
+      expect(files.length, 2);
+      expect(files[0].path, contains('photo.jpg'));
+      expect(files[0].type, SharedMediaType.image);
+      expect(files[0].mimeType, 'image/jpeg');
+      expect(files[0].message, 'Vacation picture');
+
+      expect(files[1].path, 'https://yank.app');
+      expect(files[1].type, SharedMediaType.url);
+    });
+
+    test('parseSharedMediaJson handles empty and malformed json gracefully', () {
+      expect(ShareReceiverService.parseSharedMediaJson(''), isEmpty);
+      expect(ShareReceiverService.parseSharedMediaJson('{not a valid json array}'), isEmpty);
+    });
   });
 }
