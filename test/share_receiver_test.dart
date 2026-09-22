@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -136,7 +137,7 @@ void main() {
 
       final initialCount = repo.items.length;
 
-      // Emit incoming share while app is running
+      final noticeFuture = bloc.stream.firstWhere((s) => s.notice != null);
       streamController.add([
         SharedMediaFile(
           path: 'https://dart.dev/guides',
@@ -144,8 +145,7 @@ void main() {
         ),
       ]);
 
-      // Allow async processing
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await noticeFuture;
 
       expect(repo.items.length, initialCount + 1);
       final captured = repo.items.firstWhere((i) => i.url == 'https://dart.dev/guides');
@@ -175,14 +175,14 @@ void main() {
         mediaStream: streamController.stream,
       );
 
+      final noticeFuture = bloc.stream.firstWhere((s) => s.notice != null);
       final service = ShareReceiverService(
         repository: repo,
         libraryBloc: bloc,
       );
       service.initialize();
 
-      // Allow cold-start async getInitialMedia to process
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await noticeFuture;
 
       expect(repo.items.any((i) => i.artwork == '/tmp/photo1.png'), isTrue);
       expect(repo.items.any((i) => i.artwork == '/tmp/photo2.png'), isTrue);
@@ -190,6 +190,51 @@ void main() {
       expect(bloc.state.notice?.message, contains('photo1.png (+1 more)'));
 
       service.dispose();
+    });
+
+    test('persistFileLocally streams content directly to disk without loading into RAM', () async {
+      final tempDir = Directory.systemTemp.createTempSync('yank_test_');
+      final sourceFile = File('${tempDir.path}/shared_photo.jpg');
+      await sourceFile.writeAsString('fake image bytes for test');
+
+      final targetDir = Directory('${tempDir.path}/captures');
+      final persistedPath = await ShareReceiverService.persistFileLocally(
+        sourcePath: sourceFile.path,
+        itemId: 'item-123',
+        targetDirectory: targetDir,
+      );
+
+      expect(File(persistedPath).existsSync(), isTrue);
+      expect(persistedPath, contains('item-123-shared_photo.jpg'));
+      expect(await File(persistedPath).readAsString(), 'fake image bytes for test');
+
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('classifyAndBuildItemAsync creates permanent file copy and populates sizeBytes', () async {
+      final tempDir = Directory.systemTemp.createTempSync('yank_test_');
+      final sourceFile = File('${tempDir.path}/recording.m4a');
+      await sourceFile.writeAsString('audio recording payload');
+
+      final targetDir = Directory('${tempDir.path}/captures');
+      final item = await ShareReceiverService.classifyAndBuildItemAsync(
+        file: SharedMediaFile(
+          path: sourceFile.path,
+          type: SharedMediaType.file,
+          mimeType: 'audio/mp4',
+        ),
+        id: 'test-async-audio',
+        createdAt: DateTime(2026, 9, 22),
+        targetDirectory: targetDir,
+      );
+
+      expect(item.kind, ItemKind.audio);
+      expect(item.audioAsset, isNotNull);
+      expect(item.audioAsset, isNot(equals(sourceFile.path)));
+      expect(File(item.audioAsset!).existsSync(), isTrue);
+      expect(item.sizeBytes, 'audio recording payload'.length);
+
+      tempDir.deleteSync(recursive: true);
     });
   });
 }
