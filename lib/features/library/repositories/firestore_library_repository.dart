@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/repositories/demo_fixtures.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
@@ -52,7 +53,18 @@ class FirestoreLibraryRepository implements LibraryRepository {
           }
         }
 
-        _items = List.unmodifiable(loaded);
+        // Automatically purge archived items that exceeded 30-day retention window
+        for (final item in loaded) {
+          if (item.isExpiredArchive) {
+            unawaited(delete(item.id).catchError((_) {}));
+          }
+        }
+
+        final active = loaded
+            .where((item) => !item.isExpiredArchive && !item.deleted)
+            .toList();
+
+        _items = List.unmodifiable(active);
         _changes.add(_items);
 
         if (!completer.isCompleted) {
@@ -105,6 +117,21 @@ class FirestoreLibraryRepository implements LibraryRepository {
   @override
   Future<void> put(YankItem item) async {
     await _collection.doc(item.id).set(item.toJson(), SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    final item = _items.where((i) => i.id == id).firstOrNull;
+    if (item != null) {
+      final localPath = item.url ?? item.artwork ?? item.audioAsset;
+      final file = LocalPathResolver.resolveFile(localPath);
+      if (file != null && file.existsSync()) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+    }
+    await _collection.doc(id).delete();
   }
 
   @override

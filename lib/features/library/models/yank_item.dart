@@ -31,6 +31,7 @@ class YankItem {
     this.sizeBytes = 0,
     this.yankedAt,
     this.archived = false,
+    this.archivedAt,
     this.deleted = false,
   });
   final String id;
@@ -45,8 +46,24 @@ class YankItem {
   final int sizeBytes;
   final DateTime? yankedAt;
   final bool archived;
+  final DateTime? archivedAt;
   final bool deleted;
   bool get isYanked => yankedAt != null;
+
+  /// Returns true if this item is archived and has exceeded the 30-day retention window.
+  bool get isExpiredArchive {
+    if (!archived) return false;
+    final date = archivedAt ?? createdAt;
+    return DateTime.now().difference(date).inDays >= 30;
+  }
+
+  /// Returns remaining days before permanent archive deletion (0 to 30).
+  int get daysUntilArchiveDeletion {
+    if (!archived) return 30;
+    final date = archivedAt ?? createdAt;
+    final remaining = 30 - DateTime.now().difference(date).inDays;
+    return remaining.clamp(0, 30);
+  }
   String get displayTitle {
     final withoutPrefix = title
         .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_'), '')
@@ -188,6 +205,7 @@ class YankItem {
     int? sizeBytes,
     Object? yankedAt = _unchanged,
     bool? archived,
+    Object? archivedAt = _unchanged,
     bool? deleted,
   }) => YankItem(
     id: id,
@@ -204,6 +222,9 @@ class YankItem {
         ? this.yankedAt
         : yankedAt as DateTime?,
     archived: archived ?? this.archived,
+    archivedAt: identical(archivedAt, _unchanged)
+        ? this.archivedAt
+        : archivedAt as DateTime?,
     deleted: deleted ?? this.deleted,
   );
 
@@ -243,6 +264,7 @@ class YankItem {
     'sizeBytes': sizeBytes,
     'yankedAt': yankedAt?.toIso8601String(),
     'archived': archived,
+    'archivedAt': archivedAt?.toIso8601String(),
     'deleted': deleted,
   };
 
@@ -260,6 +282,7 @@ class YankItem {
     sizeBytes: json['sizeBytes'] as int? ?? 0,
     yankedAt: _parseNullableDateTime(json['yankedAt']),
     archived: json['archived'] as bool? ?? false,
+    archivedAt: _parseNullableDateTime(json['archivedAt']),
     deleted: json['deleted'] as bool? ?? false,
   );
 

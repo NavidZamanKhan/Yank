@@ -91,7 +91,13 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           if (item == null) {
             return;
           }
-          await repository.put(item.copyWith(archived: !item.archived));
+          final nextArchived = !item.archived;
+          final updated = item.copyWith(
+            archived: nextArchived,
+            archivedAt: nextArchived ? DateTime.now() : null,
+            yankedAt: nextArchived ? null : item.yankedAt,
+          );
+          await repository.put(updated);
           emit(
             state.copyWith(
               items: repository.items,
@@ -99,7 +105,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
               notice: _notice(
                 item.archived
                     ? 'Back in your library.'
-                    : 'Archived. You can still find it in search.',
+                    : 'Archived. Deletes automatically after 30 days.',
                 undo: item,
               ),
             ),
@@ -110,7 +116,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
             return;
           }
           _downloads.remove(id)?.cancel();
-          await repository.put(item.copyWith(deleted: true));
+          await repository.delete(id);
           emit(
             state.copyWith(
               items: repository.items,

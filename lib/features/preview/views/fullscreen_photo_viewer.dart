@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:yank/core/motion/yank_motion.dart';
 import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/widgets/poster_artwork.dart';
@@ -126,12 +128,27 @@ class _FullscreenPhotoViewerState extends State<FullscreenPhotoViewer>
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(LucideIcons.x, color: Colors.white, size: 22),
-                        tooltip: 'Close',
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withAlpha(30),
+                      PressScale(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pop();
+                          },
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.14),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                width: 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(LucideIcons.x, color: Colors.white, size: 20),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -148,34 +165,47 @@ class _FullscreenPhotoViewerState extends State<FullscreenPhotoViewer>
                         ),
                       ),
                       if (imagePath != null) ...[
-                        IconButton(
-                          onPressed: () async {
-                            final rawPath = imagePath;
-                            final clean = rawPath.replaceFirst(RegExp(r'^file://'), '');
-                            final file = LocalPathResolver.resolveFile(clean);
-                            if (file != null && file.existsSync()) {
-                              final box = context.findRenderObject() as RenderBox?;
-                              await SharePlus.instance.share(
-                                ShareParams(
-                                  files: [
-                                    XFile(file.path, name: widget.item.displayTitle),
-                                  ],
-                                  title: widget.item.displayTitle,
-                                  sharePositionOrigin: box == null
-                                      ? null
-                                      : box.localToGlobal(Offset.zero) & box.size,
+                        PressScale(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () async {
+                              HapticFeedback.lightImpact();
+                              final rawPath = imagePath;
+                              final clean = rawPath.replaceFirst(RegExp(r'^file://'), '');
+                              final file = LocalPathResolver.resolveFile(clean);
+                              if (file != null && file.existsSync()) {
+                                final box = context.findRenderObject() as RenderBox?;
+                                await SharePlus.instance.share(
+                                  ShareParams(
+                                    files: [
+                                      XFile(file.path, name: widget.item.displayTitle),
+                                    ],
+                                    title: widget.item.displayTitle,
+                                    sharePositionOrigin: box == null
+                                        ? null
+                                        : box.localToGlobal(Offset.zero) & box.size,
+                                  ),
+                                );
+                              } else {
+                                await SharePlus.instance.share(
+                                  ShareParams(text: widget.item.displayTitle),
+                                );
+                              }
+                            },
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.14),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  width: 1,
                                 ),
-                              );
-                            } else {
-                              await SharePlus.instance.share(
-                                ShareParams(text: widget.item.displayTitle),
-                              );
-                            }
-                          },
-                          icon: const Icon(LucideIcons.share2, color: Colors.white, size: 20),
-                          tooltip: 'Share',
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.white.withAlpha(30),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(LucideIcons.share2, color: Colors.white, size: 18),
+                            ),
                           ),
                         ),
                       ],

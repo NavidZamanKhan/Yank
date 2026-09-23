@@ -148,7 +148,7 @@ class ItemPreview extends StatelessWidget {
                   _DetailRow(
                     label: 'Location',
                     value: item.archived
-                        ? 'Archive'
+                        ? 'Archive (deletes in ${item.daysUntilArchiveDeletion} days)'
                         : item.isYanked
                         ? 'Library and Yank'
                         : 'Library',
@@ -173,11 +173,11 @@ class ItemPreview extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: FilledButton.icon(
+                    child: YankButton(
+                      label: item.isYanked ? 'Unyank' : 'Keep close',
+                      icon: LucideIcons.arrowDownLeft,
                       onPressed: () =>
                           context.read<LibraryBloc>().add(ItemYankToggled(id)),
-                      icon: const Icon(LucideIcons.arrowDownLeft, size: 18),
-                      label: Text(item.isYanked ? 'Unyank' : 'Keep close'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -395,46 +395,44 @@ class _PhotoPreviewState extends State<_PhotoPreview> {
         Row(
           children: [
             Expanded(
+              flex: 3,
               child: isAvailable
-                  ? FilledButton.icon(
+                  ? YankButton(
+                      label: 'Open',
+                      icon: LucideIcons.maximize2,
                       onPressed: () =>
                           FullscreenPhotoViewer.open(context, item),
-                      icon: const Icon(LucideIcons.maximize2, size: 16),
-                      label: const Text('Open'),
                     )
                   : isDownloading
-                      ? FilledButton.icon(
-                          onPressed: null,
-                          icon: const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          label: const Text('Downloading...'),
+                      ? const YankButton(
+                          label: 'Downloading...',
+                          loading: true,
                         )
-                      : FilledButton.icon(
+                      : YankButton(
+                          label: 'Download then open',
+                          icon: LucideIcons.download,
                           onPressed: _onDownloadThenOpen,
-                          icon: const Icon(LucideIcons.download, size: 16),
-                          label: const Text('Download then open'),
                         ),
             ),
-            const SizedBox(width: 10),
-            if (isDownloading)
-              OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _openOnDownload = false;
-                  });
-                  context.read<LibraryBloc>().add(DownloadCancelled(item.id));
-                },
-                child: const Text('Cancel'),
-              )
-            else
-              OutlinedButton.icon(
-                onPressed: () => _shareLocalFile(context, item),
-                icon: const Icon(LucideIcons.share2, size: 16),
-                label: const Text('Share'),
-              ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: isDownloading
+                  ? YankButton.secondary(
+                      label: 'Cancel',
+                      onPressed: () {
+                        setState(() {
+                          _openOnDownload = false;
+                        });
+                        context.read<LibraryBloc>().add(DownloadCancelled(item.id));
+                      },
+                    )
+                  : YankButton.secondary(
+                      label: 'Share',
+                      icon: LucideIcons.share2,
+                      onPressed: () => _shareLocalFile(context, item),
+                    ),
+            ),
           ],
         ),
       ],
@@ -625,46 +623,43 @@ class _DocumentPreviewState extends State<_DocumentPreview> {
           Row(
             children: [
               Expanded(
+                flex: 3,
                 child: isAvailable
-                    ? FilledButton.icon(
+                    ? YankButton(
+                        label: 'Open',
+                        icon: LucideIcons.externalLink,
                         onPressed: () => _openFile(context, item),
-                        icon: const Icon(LucideIcons.externalLink, size: 16),
-                        label: const Text('Open'),
                       )
                     : isDownloading
-                        ? FilledButton.icon(
-                            onPressed: null,
-                            icon: const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            label: const Text('Downloading...'),
+                        ? const YankButton(
+                            label: 'Downloading...',
+                            loading: true,
                           )
-                        : FilledButton.icon(
+                        : YankButton(
+                            label: 'Download then open',
+                            icon: LucideIcons.download,
                             onPressed: _onDownloadThenOpen,
-                            icon: const Icon(LucideIcons.download, size: 16),
-                            label: const Text('Download then open'),
                           ),
               ),
-              const SizedBox(width: 10),
-              if (isDownloading)
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _openOnDownload = false;
-                    });
-                    context.read<LibraryBloc>().add(DownloadCancelled(item.id));
-                  },
-                  child: const Text('Cancel'),
-                )
-              else
-                OutlinedButton.icon(
-                  onPressed: () => _shareLocalFile(context, item),
-                  icon: const Icon(LucideIcons.share2, size: 16),
-                  label: const Text('Share'),
-                ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: isDownloading
+                    ? YankButton.secondary(
+                        label: 'Cancel',
+                        onPressed: () {
+                          setState(() {
+                            _openOnDownload = false;
+                          });
+                          context.read<LibraryBloc>().add(DownloadCancelled(item.id));
+                        },
+                      )
+                    : YankButton.secondary(
+                        label: 'Share',
+                        icon: LucideIcons.share2,
+                        onPressed: () => _shareLocalFile(context, item),
+                      ),
+              ),
             ],
           ),
         ],
@@ -828,17 +823,21 @@ class _LinkPreview extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
+                      flex: 3,
+                      child: YankButton(
+                        label: 'Open original',
+                        icon: LucideIcons.externalLink,
                         onPressed: () => openOriginal(context, item),
-                        icon: const Icon(LucideIcons.externalLink, size: 16),
-                        label: const Text('Open original'),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      onPressed: () => _shareLocalFile(context, item),
-                      icon: const Icon(LucideIcons.share2, size: 16),
-                      label: const Text('Share'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: YankButton.secondary(
+                        label: 'Share',
+                        icon: LucideIcons.share2,
+                        onPressed: () => _shareLocalFile(context, item),
+                      ),
                     ),
                   ],
                 ),

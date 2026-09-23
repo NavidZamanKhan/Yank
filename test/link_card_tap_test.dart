@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yank/app/yank_app.dart';
+import 'package:yank/core/widgets/yank_controls.dart';
 import 'package:yank/features/audio/repositories/audio_repository.dart';
 import 'package:yank/features/auth/models/auth_user.dart';
 import 'package:yank/features/auth/repositories/demo_auth_repository.dart';
@@ -89,7 +90,7 @@ void main() {
     expect(find.byType(ItemPreview), findsOneWidget);
 
     // Verify "Open original" button and domain badge are inside the preview sheet
-    expect(find.widgetWithText(FilledButton, 'Open original'), findsOneWidget);
+    expect(find.widgetWithText(YankButton, 'Open original'), findsOneWidget);
     expect(find.text('flutter.dev'), findsWidgets);
     expect(find.text('Flutter transforms the frontend development process.'), findsWidgets);
 

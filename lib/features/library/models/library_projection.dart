@@ -14,7 +14,7 @@ abstract final class LibraryProjection {
         .split(RegExp(r'\s+'))
         .where((s) => s.isNotEmpty);
     final result = items.where((item) {
-      if (item.deleted) {
+      if (item.deleted || item.isExpiredArchive) {
         return false;
       }
       final inSection = switch (section) {

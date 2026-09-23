@@ -19,6 +19,7 @@ class DemoLibraryRepository implements LibraryRepository {
     bool seedIfEmpty = true,
   }) async {
     final saved = await store.read(storageKey);
+    final rawCount = saved != null ? (jsonDecode(saved) as List).length : 0;
     final items = saved == null
         ? (seedIfEmpty ? DemoFixtures.build() : const <YankItem>[])
         : (jsonDecode(saved) as List)
@@ -28,11 +29,12 @@ class DemoLibraryRepository implements LibraryRepository {
               )
               .where(
                 (item) =>
-                    seedIfEmpty || !DemoFixtures.demoIds.contains(item.id),
+                    (seedIfEmpty || !DemoFixtures.demoIds.contains(item.id)) &&
+                    !item.isExpiredArchive,
               )
               .toList();
     final repository = DemoLibraryRepository._(store, List.unmodifiable(items));
-    if (saved == null) {
+    if (saved == null || items.length != rawCount) {
       await repository._commit(items);
     }
     return repository;
@@ -57,6 +59,9 @@ class DemoLibraryRepository implements LibraryRepository {
   @override
   Future<void> put(YankItem item) =>
       _transaction(() => [..._items.where((old) => old.id != item.id), item]);
+  @override
+  Future<void> delete(String id) =>
+      _transaction(() => _items.where((old) => old.id != id).toList());
   @override
   Future<void> clearYank() => _transaction(
     () => _items.map((item) => item.copyWith(yankedAt: null)).toList(),
