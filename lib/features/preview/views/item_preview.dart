@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -8,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yank/core/theme/yank_theme.dart';
 import 'package:yank/core/utils/formatters.dart';
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/core/widgets/yank_controls.dart';
 import 'package:yank/core/widgets/yank_feedback.dart';
 import 'package:yank/features/audio/widgets/audio_controls.dart';
@@ -681,8 +680,8 @@ Future<void> _openFile(BuildContext context, YankItem item) async {
     return;
   }
   final cleanPath = path.replaceFirst(RegExp(r'^file://'), '');
-  final file = File(cleanPath);
-  if (!file.existsSync()) {
+  final file = LocalPathResolver.resolveFile(cleanPath);
+  if (file == null || !file.existsSync()) {
     showMessage(context, 'This file is not currently stored on this device.');
     return;
   }
@@ -698,6 +697,7 @@ Future<void> _openFile(BuildContext context, YankItem item) async {
 
   // 2. Cross-platform universal launcher: open via native share/action sheet
   try {
+    if (!context.mounted) return;
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
@@ -719,8 +719,8 @@ Future<void> _shareLocalFile(BuildContext context, YankItem item) async {
   final path = item.url ?? item.artwork ?? item.audioAsset ?? item.body;
   if (path.isEmpty) return;
   final cleanPath = path.replaceFirst(RegExp(r'^file://'), '');
-  final file = File(cleanPath);
-  if (file.existsSync()) {
+  final file = LocalPathResolver.resolveFile(cleanPath);
+  if (file != null && file.existsSync()) {
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(

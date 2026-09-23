@@ -6,10 +6,10 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'package:yank/app/yank_app.dart';
 import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/features/auth/repositories/auth_repository.dart';
 import 'package:yank/features/auth/repositories/demo_auth_repository.dart';
 import 'package:yank/features/auth/repositories/firebase_auth_repository.dart';
-import 'package:yank/features/library/repositories/demo_fixtures.dart';
 import 'package:yank/features/library/repositories/demo_library_repository.dart';
 import 'package:yank/features/library/repositories/preferences_metadata_store.dart';
 import 'package:yank/features/settings/repositories/settings_repository.dart';
@@ -17,6 +17,7 @@ import 'package:yank/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LocalPathResolver.initialize();
   await _start();
 }
 
@@ -27,7 +28,7 @@ Future<void> _start({bool reset = false}) async {
       await store.write(DemoAuthRepository.storageKey, 'null');
       await store.write(
         DemoLibraryRepository.storageKey,
-        jsonEncode(DemoFixtures.build().map((item) => item.toJson()).toList()),
+        '[]',
       );
       await store.write(
         SettingsRepository.key,
@@ -36,7 +37,7 @@ Future<void> _start({bool reset = false}) async {
     }
     final settingsRepository = SettingsRepository(store);
     final appearance = await settingsRepository.load();
-    final library = await DemoLibraryRepository.open(store);
+    final library = await DemoLibraryRepository.open(store, seedIfEmpty: false);
     AuthRepository auth;
     try {
       if (Firebase.apps.isEmpty) {

@@ -1,7 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import 'package:yank/core/utils/local_path_resolver.dart';
 
 /// Artwork renderer supporting real image files, network URLs, and vector sample posters.
 class PosterArtwork extends StatelessWidget {
@@ -15,23 +16,24 @@ class PosterArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (variant.startsWith('/') || variant.startsWith('file:')) {
-      final path = variant.replaceFirst(RegExp(r'^file://'), '');
-      final file = File(path);
-      if (file.existsSync()) {
-        return Image.file(
-          file,
-          fit: fit,
-          errorBuilder: (context, error, stackTrace) => _buildFallback(context),
-        );
-      }
-    } else if (variant.startsWith('http://') || variant.startsWith('https://')) {
+    if (variant.startsWith('http://') || variant.startsWith('https://')) {
       return Image.network(
         variant,
         fit: fit,
         errorBuilder: (context, error, stackTrace) => _buildFallback(context),
       );
     }
+
+    final clean = variant.replaceFirst(RegExp(r'^file://'), '');
+    final file = LocalPathResolver.resolveFile(clean);
+    if (file != null && file.existsSync()) {
+      return Image.file(
+        file,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _buildFallback(context),
+      );
+    }
+
     return _buildFallback(context);
   }
 

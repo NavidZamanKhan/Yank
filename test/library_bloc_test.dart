@@ -28,7 +28,13 @@ void main() {
   );
   test('cancelled download cannot later become available', () async {
     final repository = await DemoLibraryRepository.open(MemoryMetadataStore());
-    final bloc = LibraryBloc(repository);
+    final bloc = LibraryBloc(
+      repository,
+      initialState: LibraryState(
+        items: repository.items,
+        local: const {'checklist': LocalAvailability.cloud},
+      ),
+    );
     final started = bloc.stream.firstWhere(
       (s) => s.availability('checklist') == LocalAvailability.downloading,
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:yank/features/capture/services/share_receiver_service.dart';
 import 'package:yank/features/capture/services/url_metadata_service.dart';
 import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
@@ -250,13 +251,19 @@ class CaptureBloc extends Bloc<CaptureEvent, CaptureState> {
                   ? state.fileName!
                   : 'Photo');
 
+          final itemId = 'capture-${now.microsecondsSinceEpoch}';
+          final persistedPath = await ShareReceiverService.persistFileLocally(
+            sourcePath: state.filePath!,
+            itemId: itemId,
+          );
+
           final item = YankItem(
-            id: 'capture-${now.microsecondsSinceEpoch}',
+            id: itemId,
             kind: ItemKind.photo,
             title: derivedTitle,
             createdAt: now,
             body: value,
-            artwork: state.filePath,
+            artwork: persistedPath,
             sizeBytes: state.fileSize,
           );
 
@@ -282,13 +289,19 @@ class CaptureBloc extends Bloc<CaptureEvent, CaptureState> {
                   ? state.fileName!
                   : 'Audio Track');
 
+          final itemId = 'capture-${now.microsecondsSinceEpoch}';
+          final persistedPath = await ShareReceiverService.persistFileLocally(
+            sourcePath: state.filePath!,
+            itemId: itemId,
+          );
+
           final item = YankItem(
-            id: 'capture-${now.microsecondsSinceEpoch}',
+            id: itemId,
             kind: ItemKind.audio,
             title: derivedTitle,
             createdAt: now,
             body: value,
-            audioAsset: state.filePath,
+            audioAsset: persistedPath,
             sizeBytes: state.fileSize,
           );
 
@@ -314,12 +327,18 @@ class CaptureBloc extends Bloc<CaptureEvent, CaptureState> {
                   ? state.fileName!
                   : 'Document');
 
+          final itemId = 'capture-${now.microsecondsSinceEpoch}';
+          final persistedPath = await ShareReceiverService.persistFileLocally(
+            sourcePath: state.filePath!,
+            itemId: itemId,
+          );
+
           final item = YankItem(
-            id: 'capture-${now.microsecondsSinceEpoch}',
+            id: itemId,
             kind: ItemKind.file,
             title: derivedTitle,
             createdAt: now,
-            url: state.filePath,
+            url: persistedPath,
             body: value.isNotEmpty
                 ? value
                 : (state.fileName ?? ''),

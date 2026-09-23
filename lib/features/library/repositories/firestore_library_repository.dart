@@ -26,7 +26,7 @@ class FirestoreLibraryRepository implements LibraryRepository {
   static Future<FirestoreLibraryRepository> open({
     required String userId,
     FirebaseFirestore? firestore,
-    bool seedIfEmpty = true,
+    bool seedIfEmpty = false,
   }) async {
     final repository = FirestoreLibraryRepository(
       userId: userId,
@@ -36,14 +36,21 @@ class FirestoreLibraryRepository implements LibraryRepository {
     return repository;
   }
 
-  Future<void> _init({bool seedIfEmpty = true}) async {
+  Future<void> _init({bool seedIfEmpty = false}) async {
     final completer = Completer<void>();
 
     _subscription = _collection.snapshots().listen(
       (snapshot) {
-        final loaded = snapshot.docs.map((doc) {
-          return YankItem.fromMap(doc.data(), id: doc.id);
-        }).toList();
+        final loaded = snapshot.docs
+            .map((doc) => YankItem.fromMap(doc.data(), id: doc.id))
+            .where((item) => !DemoFixtures.demoIds.contains(item.id))
+            .toList();
+
+        for (final doc in snapshot.docs) {
+          if (DemoFixtures.demoIds.contains(doc.id)) {
+            unawaited(doc.reference.delete().catchError((_) {}));
+          }
+        }
 
         _items = List.unmodifiable(loaded);
         _changes.add(_items);

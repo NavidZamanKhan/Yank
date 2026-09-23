@@ -17,6 +17,23 @@ Stone surfaces, smoky iris accents, sharp icons, and movement that follows your 
 Find a reference on your phone. Use it at your desk. Keep the useful things close.
 
 Design sample document. September 2026.''';
+
+  static const demoIds = {
+    'flutter',
+    'poster',
+    'audio',
+    'brief',
+    'thought',
+    'bloc',
+    'scenic',
+    'video',
+    'list',
+    'type',
+    'design',
+    'checklist',
+    'archive',
+  };
+
   static List<YankItem> build([DateTime? clock]) {
     final now = clock ?? DateTime.now();
     DateTime ago(int minutes) => now.subtract(Duration(minutes: minutes));

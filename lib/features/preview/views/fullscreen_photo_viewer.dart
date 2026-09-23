@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/widgets/poster_artwork.dart';
 
@@ -17,8 +16,8 @@ class FullscreenPhotoViewer extends StatefulWidget {
         PageRouteBuilder(
           opaque: false,
           barrierColor: Colors.black,
-          pageBuilder: (_, __, ___) => FullscreenPhotoViewer(item: item),
-          transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          pageBuilder: (context, _, _) => FullscreenPhotoViewer(item: item),
+          transitionsBuilder: (context, animation, _, child) => FadeTransition(
             opacity: CurvedAnimation(
               parent: animation,
               curve: Curves.easeOutCubic,
@@ -71,8 +70,8 @@ class _FullscreenPhotoViewerState extends State<FullscreenPhotoViewer>
     } else {
       final position = details.localPosition;
       targetMatrix = Matrix4.identity()
-        ..translate(-position.dx * 1.5, -position.dy * 1.5)
-        ..scale(2.5);
+        ..translateByDouble(-position.dx * 1.5, -position.dy * 1.5, 0, 1)
+        ..scaleByDouble(2.5, 2.5, 1, 1);
     }
 
     _zoomAnimation = Matrix4Tween(
@@ -152,10 +151,9 @@ class _FullscreenPhotoViewerState extends State<FullscreenPhotoViewer>
                         IconButton(
                           onPressed: () async {
                             final rawPath = imagePath;
-                            final file = File(
-                              rawPath.replaceFirst(RegExp(r'^file://'), ''),
-                            );
-                            if (file.existsSync()) {
+                            final clean = rawPath.replaceFirst(RegExp(r'^file://'), '');
+                            final file = LocalPathResolver.resolveFile(clean);
+                            if (file != null && file.existsSync()) {
                               final box = context.findRenderObject() as RenderBox?;
                               await SharePlus.instance.share(
                                 ShareParams(

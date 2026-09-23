@@ -14,14 +14,21 @@ class DemoLibraryRepository implements LibraryRepository {
   final _changes = StreamController<List<YankItem>>.broadcast(sync: true);
   Future<void> _pending = Future.value();
 
-  static Future<DemoLibraryRepository> open(MetadataStore store) async {
+  static Future<DemoLibraryRepository> open(
+    MetadataStore store, {
+    bool seedIfEmpty = true,
+  }) async {
     final saved = await store.read(storageKey);
     final items = saved == null
-        ? DemoFixtures.build()
+        ? (seedIfEmpty ? DemoFixtures.build() : const <YankItem>[])
         : (jsonDecode(saved) as List)
               .map(
                 (value) =>
                     YankItem.fromJson(Map<String, dynamic>.from(value as Map)),
+              )
+              .where(
+                (item) =>
+                    seedIfEmpty || !DemoFixtures.demoIds.contains(item.id),
               )
               .toList();
     final repository = DemoLibraryRepository._(store, List.unmodifiable(items));
@@ -55,7 +62,7 @@ class DemoLibraryRepository implements LibraryRepository {
     () => _items.map((item) => item.copyWith(yankedAt: null)).toList(),
   );
   @override
-  Future<void> reset() => _transaction(DemoFixtures.build);
+  Future<void> reset() => _transaction(() => const <YankItem>[]);
   Future<void> _transaction(List<YankItem> Function() update) {
     // Capture and Library have separate Blocs. Serialize at their shared storage
     // boundary as well so simultaneous capture/toggle operations cannot lose data.

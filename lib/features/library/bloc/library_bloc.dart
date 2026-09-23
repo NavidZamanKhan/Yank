@@ -10,7 +10,8 @@ export 'library_event.dart';
 export 'library_state.dart';
 
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
-  LibraryBloc(this.repository) : super(LibraryState(items: repository.items)) {
+  LibraryBloc(this.repository, {LibraryState? initialState})
+      : super(initialState ?? LibraryState(items: repository.items)) {
     // One sequential event lane preserves ordering across different mutations,
     // including rapid double taps. Downloads use cancellable completion events
     // so a transfer never blocks searching, filtering, or navigation.

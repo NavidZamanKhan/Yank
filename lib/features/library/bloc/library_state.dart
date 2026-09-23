@@ -22,7 +22,7 @@ class LibraryState extends Equatable {
     this.source,
     this.query = '',
     this.selectedId,
-    this.local = const {'checklist': LocalAvailability.cloud},
+    this.local = const {},
     this.offline = false,
     this.notice,
   });

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yank/core/theme/yank_theme.dart';
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/core/widgets/yank_feedback.dart';
 import 'package:yank/features/library/bloc/library_bloc.dart';
 import 'package:yank/features/library/models/yank_item.dart';
@@ -63,10 +62,9 @@ class ItemActions extends StatelessWidget {
                 : box.localToGlobal(Offset.zero) & box.size;
 
             final localPath = item.url ?? item.artwork ?? item.audioAsset;
-            final cleanPath = localPath != null
-                ? localPath.replaceFirst(RegExp(r'^file://'), '')
-                : null;
-            final localFile = cleanPath != null ? File(cleanPath) : null;
+            final cleanPath =
+                localPath?.replaceFirst(RegExp(r'^file://'), '');
+            final localFile = LocalPathResolver.resolveFile(cleanPath);
 
             if (localFile != null && localFile.existsSync()) {
               await SharePlus.instance.share(
