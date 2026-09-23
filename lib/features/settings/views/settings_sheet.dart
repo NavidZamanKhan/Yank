@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:yank/core/motion/yank_motion.dart';
 import 'package:yank/core/theme/yank_theme.dart';
 import 'package:yank/core/widgets/yank_controls.dart';
 import 'package:yank/features/auth/widgets/logout_tile.dart';
@@ -50,57 +52,84 @@ class SettingsSheet extends StatelessWidget {
                 children: [
                   const _Label('Appearance'),
                   Row(
-                    children: ThemeMode.values
-                        .map(
-                          (mode) => Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: OutlinedButton(
-                                onPressed: () => context
-                                    .read<SettingsBloc>()
-                                    .add(ThemeChanged(mode)),
-                                style: OutlinedButton.styleFrom(
+                    children: ThemeMode.values.map((mode) {
+                      final selected = settings.appearance.themeMode == mode;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: mode == ThemeMode.values.last ? 0 : 8,
+                          ),
+                          child: Semantics(
+                            button: true,
+                            selected: selected,
+                            child: PressScale(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  context
+                                      .read<SettingsBloc>()
+                                      .add(ThemeChanged(mode));
+                                },
+                                child: AnimatedContainer(
+                                  duration: YankMotion.quick,
+                                  curve: Curves.easeOutCubic,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 13,
                                     horizontal: 4,
                                   ),
-                                  foregroundColor:
-                                      settings.appearance.themeMode == mode
-                                      ? context.colors.iris
-                                      : context.colors.muted,
-                                  backgroundColor:
-                                      settings.appearance.themeMode == mode
-                                      ? context.colors.tint
-                                      : context.colors.surface,
-                                  side: BorderSide(
-                                    color: settings.appearance.themeMode == mode
+                                  decoration: BoxDecoration(
+                                    color: selected
                                         ? context.colors.tint
-                                        : context.colors.line,
-                                  ),
-                                  shape: RoundedRectangleBorder(
+                                        : context.colors.surface,
                                     borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: selected
+                                          ? context.colors.iris.withValues(alpha: 0.35)
+                                          : context.colors.line,
+                                      width: 1,
+                                    ),
                                   ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(switch (mode) {
-                                      ThemeMode.system => LucideIcons.monitor,
-                                      ThemeMode.light => LucideIcons.sun,
-                                      ThemeMode.dark => LucideIcons.moon,
-                                    }, size: 19),
-                                    const SizedBox(height: 7),
-                                    Text(switch (mode) {
-                                      ThemeMode.system => 'System',
-                                      ThemeMode.light => 'Light',
-                                      ThemeMode.dark => 'Dark',
-                                    }, style: const TextStyle(fontSize: 12)),
-                                  ],
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        switch (mode) {
+                                          ThemeMode.system =>
+                                            LucideIcons.monitor,
+                                          ThemeMode.light => LucideIcons.sun,
+                                          ThemeMode.dark => LucideIcons.moon,
+                                        },
+                                        size: 19,
+                                        color: selected
+                                            ? context.colors.iris
+                                            : context.colors.muted,
+                                      ),
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        switch (mode) {
+                                          ThemeMode.system => 'System',
+                                          ThemeMode.light => 'Light',
+                                          ThemeMode.dark => 'Dark',
+                                        },
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                          color: selected
+                                              ? context.colors.iris
+                                              : context.colors.muted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        )
-                        .toList(),
+                        ),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile.adaptive(
