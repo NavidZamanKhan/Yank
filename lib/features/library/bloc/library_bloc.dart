@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:yank/core/utils/local_path_resolver.dart';
+import 'package:yank/features/capture/services/binary_sync_service.dart';
 import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/firestore_library_repository.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
 import 'package:yank/features/library/bloc/library_event.dart';
 import 'package:yank/features/library/bloc/library_state.dart';
@@ -46,6 +49,30 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
               source: sourceStillExists ? state.source : null,
             ),
           );
+
+          if (repository is FirestoreLibraryRepository && !state.offline) {
+            final repo = repository as FirestoreLibraryRepository;
+            for (final item in items) {
+              if (item.kind == ItemKind.photo &&
+                  !item.deleted &&
+                  !item.archived) {
+                final localPath = item.artwork ?? item.url;
+                final file = LocalPathResolver.resolveFile(localPath);
+                if (file == null || !file.existsSync()) {
+                  unawaited(
+                    BinarySyncService().downloadBinary(
+                      userId: repo.userId,
+                      item: item,
+                    ).then((downloaded) {
+                      if (downloaded != null && !isClosed) {
+                        add(DownloadFinished(item.id));
+                      }
+                    }).catchError((_) => null),
+                  );
+                }
+              }
+            }
+          }
         case SectionChanged(:final section):
           emit(
             state.copyWith(
@@ -172,7 +199,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
             ),
           );
         case DownloadRequested(:final id):
-          if (_current(id) == null ||
+          final item = _current(id);
+          if (item == null ||
               state.availability(id) != LocalAvailability.cloud) {
             return;
           }
@@ -183,11 +211,28 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
             return;
           }
           _setLocal(emit, id, LocalAvailability.downloading);
-          _downloads[id] = Timer(const Duration(milliseconds: 1400), () {
-            if (!isClosed) {
-              add(DownloadFinished(id));
-            }
-          });
+          if (repository is FirestoreLibraryRepository) {
+            final repo = repository as FirestoreLibraryRepository;
+            unawaited(() async {
+              final downloaded = await BinarySyncService().downloadBinary(
+                userId: repo.userId,
+                item: item,
+              );
+              if (!isClosed) {
+                if (downloaded != null) {
+                  add(DownloadFinished(id));
+                } else {
+                  add(DownloadCancelled(id));
+                }
+              }
+            }());
+          } else {
+            _downloads[id] = Timer(const Duration(milliseconds: 1400), () {
+              if (!isClosed) {
+                add(DownloadFinished(id));
+              }
+            });
+          }
         case DownloadFinished(:final id):
           if (_downloads.remove(id) == null || _current(id) == null) {
             return;

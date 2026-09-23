@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:yank/features/capture/services/binary_sync_service.dart';
 import 'package:yank/features/capture/services/share_receiver_service.dart';
 import 'package:yank/features/capture/services/url_metadata_service.dart';
 import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/library/repositories/firestore_library_repository.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
 
 sealed class CaptureEvent extends Equatable {
@@ -355,6 +357,16 @@ class CaptureBloc extends Bloc<CaptureEvent, CaptureState> {
     try {
       await repository.put(item);
       emit(state.copyWith(saved: true, saving: false));
+
+      if (repository is FirestoreLibraryRepository) {
+        final repo = repository as FirestoreLibraryRepository;
+        unawaited(
+          BinarySyncService().uploadBinary(
+            userId: repo.userId,
+            item: item,
+          ).catchError((_) => false),
+        );
+      }
     } catch (e) {
       emit(
         state.copyWith(

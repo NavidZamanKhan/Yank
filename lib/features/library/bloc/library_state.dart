@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import 'package:yank/core/utils/local_path_resolver.dart';
 import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 
@@ -45,8 +46,21 @@ class LibraryState extends Equatable {
   List<String> get sources => LibraryProjection.sources(items, section);
   int get yankCount =>
       items.where((i) => i.isYanked && !i.archived && !i.deleted).length;
-  LocalAvailability availability(String id) =>
-      local[id] ?? LocalAvailability.available;
+  LocalAvailability availability(String id) {
+    if (local.containsKey(id)) {
+      return local[id]!;
+    }
+    final it = item(id);
+    if (it == null || it.kind == ItemKind.link || it.kind == ItemKind.text) {
+      return LocalAvailability.available;
+    }
+    final localPath = it.artwork ?? it.audioAsset ?? it.url;
+    final file = LocalPathResolver.resolveFile(localPath);
+    if (file != null && file.existsSync()) {
+      return LocalAvailability.available;
+    }
+    return LocalAvailability.cloud;
+  }
   YankItem? item(String id) {
     for (final item in items) {
       if (item.id == id && !item.deleted) {

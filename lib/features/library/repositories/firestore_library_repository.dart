@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:yank/core/utils/local_path_resolver.dart';
+import 'package:yank/features/capture/services/binary_sync_service.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/repositories/demo_fixtures.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
@@ -85,6 +86,14 @@ class FirestoreLibraryRepository implements LibraryRepository {
       await close();
       throw StateError('Firestore connection failed: $error');
     }
+
+    // Trigger background sync for any locally captured binaries awaiting cloud sync
+    unawaited(
+      BinarySyncService().syncPendingUploads(
+        userId: userId,
+        items: _items,
+      ).catchError((_) {}),
+    );
 
     if (_items.isEmpty && seedIfEmpty) {
       try {

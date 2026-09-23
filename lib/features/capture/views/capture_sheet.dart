@@ -445,6 +445,7 @@ class _CaptureSheetState extends State<CaptureSheet> {
                                     child: Image.file(
                                       File(state.filePath!),
                                       fit: BoxFit.cover,
+                                      alignment: Alignment.topCenter,
                                     ),
                                   ),
                                   Positioned(

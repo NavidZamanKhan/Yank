@@ -317,7 +317,10 @@ class _PhotoPreviewState extends State<_PhotoPreview> {
                   aspectRatio: 4 / 3,
                   child: PosterArtwork(
                     variant: item.artwork ?? 'slow',
+                    remoteUrl: item.url,
                     fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    isDownloading: isDownloading,
                   ),
                 ),
               ),
@@ -757,7 +760,9 @@ class _LinkPreview extends StatelessWidget {
               aspectRatio: 16 / 9,
               child: PosterArtwork(
                 variant: item.artwork!,
+                remoteUrl: item.url,
                 fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
               ),
             ),
           Padding(

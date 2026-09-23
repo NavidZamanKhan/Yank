@@ -129,7 +129,11 @@ class YankItemCard extends StatelessWidget {
           SizedBox(
             height: 118,
             width: double.infinity,
-            child: PosterArtwork(variant: item.artwork ?? 'slow'),
+            child: PosterArtwork(
+              variant: item.artwork ?? 'slow',
+              remoteUrl: item.url,
+              alignment: Alignment.topCenter,
+            ),
           ),
           row,
         ],
@@ -145,7 +149,9 @@ class YankItemCard extends StatelessWidget {
             width: double.infinity,
             child: PosterArtwork(
               variant: item.artwork!,
+              remoteUrl: item.url,
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
           row,

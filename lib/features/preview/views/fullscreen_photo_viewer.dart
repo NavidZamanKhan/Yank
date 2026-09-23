@@ -114,6 +114,7 @@ class _FullscreenPhotoViewerState extends State<FullscreenPhotoViewer>
                 child: PosterArtwork(
                   variant: imagePath ?? 'slow',
                   fit: BoxFit.contain,
+                  alignment: Alignment.center,
                 ),
               ),
             ),

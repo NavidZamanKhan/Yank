@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:yank/core/utils/local_path_resolver.dart';
 
@@ -9,10 +10,20 @@ class PosterArtwork extends StatelessWidget {
   const PosterArtwork({
     super.key,
     this.variant = 'slow',
+    this.remoteUrl,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.topCenter,
+    this.isDownloading = false,
   });
+
   final String variant;
+  final String? remoteUrl;
   final BoxFit fit;
+  final Alignment alignment;
+  final bool isDownloading;
+
+  bool get _isSamplePoster =>
+      variant == 'slow' || variant == 'scenic' || variant == 'form';
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +31,8 @@ class PosterArtwork extends StatelessWidget {
       return Image.network(
         variant,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => _buildFallback(context),
+        alignment: alignment,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
       );
     }
 
@@ -30,11 +42,50 @@ class PosterArtwork extends StatelessWidget {
       return Image.file(
         file,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => _buildFallback(context),
+        alignment: alignment,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildFallbackOrPlaceholder(context),
       );
     }
 
-    return _buildFallback(context);
+    if (remoteUrl != null &&
+        (remoteUrl!.startsWith('http://') ||
+            remoteUrl!.startsWith('https://'))) {
+      return Image.network(
+        remoteUrl!,
+        fit: fit,
+        alignment: alignment,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
+      );
+    }
+
+    return _buildFallbackOrPlaceholder(context);
+  }
+
+  Widget _buildFallbackOrPlaceholder(BuildContext context) {
+    if (_isSamplePoster) {
+      return _buildFallback(context);
+    }
+    return _buildPlaceholder(context);
+  }
+
+  Widget _buildPlaceholder(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1F1F4),
+      alignment: Alignment.center,
+      child: isDownloading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              LucideIcons.image,
+              size: 32,
+              color: isDark ? Colors.white24 : Colors.black26,
+            ),
+    );
   }
 
   Widget _buildFallback(BuildContext context) => Semantics(
