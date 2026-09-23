@@ -59,6 +59,21 @@ class YankItemCard extends StatelessWidget {
                 : FontWeight.w600,
           ),
         ),
+        if (item.kind == ItemKind.link &&
+            item.body.isNotEmpty &&
+            item.body != item.url &&
+            item.body != item.title) ...[
+          const SizedBox(height: 2),
+          Text(
+            item.body,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  height: 1.3,
+                  fontSize: 12,
+                ),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           _metadata(),
@@ -108,6 +123,23 @@ class YankItemCard extends StatelessWidget {
             height: 118,
             width: double.infinity,
             child: PosterArtwork(variant: item.artwork ?? 'slow'),
+          ),
+          row,
+        ],
+      );
+    } else if (item.kind == ItemKind.link &&
+        item.artwork != null &&
+        item.artwork!.isNotEmpty) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 124,
+            width: double.infinity,
+            child: PosterArtwork(
+              variant: item.artwork!,
+              fit: BoxFit.cover,
+            ),
           ),
           row,
         ],

@@ -13,6 +13,7 @@ import 'package:yank/core/widgets/yank_feedback.dart';
 import 'package:yank/features/audio/widgets/audio_controls.dart';
 import 'package:yank/features/library/bloc/library_bloc.dart';
 import 'package:yank/features/library/models/yank_item.dart';
+import 'package:yank/features/capture/services/url_metadata_service.dart';
 import 'package:yank/features/library/widgets/item_actions.dart';
 import 'package:yank/features/library/widgets/poster_artwork.dart';
 import 'package:yank/features/preview/views/fullscreen_photo_viewer.dart';
@@ -61,6 +62,13 @@ class ItemPreview extends StatelessWidget {
               child: Text('This item is no longer in your library.'),
             ),
           ],
+        );
+      }
+      if (item.kind == ItemKind.link &&
+          (item.artwork == null || item.title == item.domain)) {
+        UrlMetadataService.enrichItem(
+          context.read<LibraryBloc>().repository,
+          item,
         );
       }
       final availability = state.availability(id);
@@ -733,34 +741,114 @@ Future<void> _shareLocalFile(BuildContext context, YankItem item) async {
 class _LinkPreview extends StatelessWidget {
   const _LinkPreview({required this.item});
   final YankItem item;
+
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: context.colors.line),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(LucideIcons.link, color: context.colors.iris, size: 27),
-        const SizedBox(height: 18),
-        if (item.body.isNotEmpty) ...[
-          Text(item.body, style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: 14),
+  Widget build(BuildContext context) {
+    final hasArtwork = item.artwork != null && item.artwork!.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasArtwork)
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: PosterArtwork(
+                variant: item.artwork!,
+                fit: BoxFit.cover,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.colors.iris.withAlpha(25),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.globe,
+                        size: 13,
+                        color: context.colors.iris,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        item.domain,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.iris,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  item.displayTitle,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                ),
+                if (item.body.isNotEmpty && item.body != item.url) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    item.body,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          height: 1.5,
+                          color: context.colors.muted,
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                SelectableText(
+                  item.url ?? '',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colors.iris,
+                      ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => openOriginal(context, item),
+                        icon: const Icon(LucideIcons.externalLink, size: 16),
+                        label: const Text('Open original'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton.icon(
+                      onPressed: () => _shareLocalFile(context, item),
+                      icon: const Icon(LucideIcons.share2, size: 16),
+                      label: const Text('Share'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
-        SelectableText(item.url!, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 20),
-        FilledButton.icon(
-          onPressed: () => openOriginal(context, item),
-          icon: const Icon(LucideIcons.externalLink, size: 17),
-          label: const Text('Open original'),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _DetailRow extends StatelessWidget {

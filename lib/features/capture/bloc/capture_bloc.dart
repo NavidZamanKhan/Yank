@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:yank/features/capture/services/url_metadata_service.dart';
 import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
 import 'package:yank/features/library/repositories/library_repository.dart';
@@ -196,6 +199,7 @@ class CaptureBloc extends Bloc<CaptureEvent, CaptureState> {
           );
 
           await _save(item, emit);
+          unawaited(UrlMetadataService.enrichItem(repository, item));
           return;
         }
 

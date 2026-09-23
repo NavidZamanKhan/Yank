@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
+import 'package:yank/features/capture/services/url_metadata_service.dart';
 import 'package:yank/features/library/bloc/library_bloc.dart';
 import 'package:yank/features/library/models/library_projection.dart';
 import 'package:yank/features/library/models/yank_item.dart';
@@ -151,6 +152,9 @@ class ShareReceiverService with WidgetsBindingObserver {
     for (final item in itemsToSave) {
       try {
         await repository.put(item);
+        if (item.kind == ItemKind.link) {
+          unawaited(UrlMetadataService.enrichItem(repository, item));
+        }
       } catch (e) {
         debugPrint('ShareReceiverService failed to save item ${item.id}: $e');
       }

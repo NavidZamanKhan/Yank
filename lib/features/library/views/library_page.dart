@@ -140,11 +140,7 @@ class _LibraryPageState extends State<LibraryPage>
   }
 
   Future<void> _open(YankItem item, bool widePreview) async {
-    if (item.kind == ItemKind.link) {
-      await openOriginal(context, item);
-    } else {
-      await _preview(item, widePreview);
-    }
+    await _preview(item, widePreview);
   }
 
   Future<void> _clearYank() async {

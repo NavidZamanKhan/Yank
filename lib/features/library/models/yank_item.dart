@@ -72,6 +72,11 @@ class YankItem {
   YankItem copyWith({
     String? title,
     String? body,
+    String? url,
+    String? artwork,
+    String? audioAsset,
+    int? durationSeconds,
+    int? sizeBytes,
     Object? yankedAt = _unchanged,
     bool? archived,
     bool? deleted,
@@ -81,11 +86,11 @@ class YankItem {
     title: title ?? this.title,
     createdAt: createdAt,
     body: body ?? this.body,
-    url: url,
-    artwork: artwork,
-    audioAsset: audioAsset,
-    durationSeconds: durationSeconds,
-    sizeBytes: sizeBytes,
+    url: url ?? this.url,
+    artwork: artwork ?? this.artwork,
+    audioAsset: audioAsset ?? this.audioAsset,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
     yankedAt: identical(yankedAt, _unchanged)
         ? this.yankedAt
         : yankedAt as DateTime?,
