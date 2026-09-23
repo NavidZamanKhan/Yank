@@ -94,8 +94,8 @@ void main() {
     );
     expect(expandedMaterial.borderRadius, equals(BorderRadius.circular(14.0)));
 
-    // Verify both plus and check are in the rotating stack, with check visible
-    expect(find.byIcon(LucideIcons.check), findsOneWidget);
+    // Verify check is not in notice banner
+    expect(find.byIcon(LucideIcons.check), findsNothing);
 
     // Advance past hold duration (2800ms) to trigger collapse
     await tester.pump(const Duration(milliseconds: 2900));

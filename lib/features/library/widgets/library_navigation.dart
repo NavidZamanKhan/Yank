@@ -322,49 +322,32 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                   child: Stack(
                                     alignment: Alignment.center,
                                     children: [
-                                      // Plus icon rotating and traveling leftwards to blend in
-                                      Positioned(
-                                        left: (collapsedWidth - 21) / 2,
-                                        child: Transform.rotate(
-                                          angle: animValue * (math.pi / 2),
-                                          child: SizedBox.square(
-                                            dimension: 21,
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                if (animValue < 0.8)
-                                                  Opacity(
-                                                    opacity:
-                                                        (1.0 - animValue * 1.6)
-                                                            .clamp(0.0, 1.0),
-                                                    child: Icon(
-                                                      LucideIcons.plus,
-                                                      size: 21,
-                                                      color: onPrimaryColor,
-                                                    ),
-                                                  ),
-                                                if (animValue > 0.2)
-                                                  Opacity(
-                                                    opacity:
-                                                        ((animValue - 0.25) *
-                                                                1.5)
-                                                            .clamp(0.0, 1.0),
-                                                    child: Icon(
-                                                      LucideIcons.check,
-                                                      size: 19,
-                                                      color: onPrimaryColor,
-                                                    ),
-                                                  ),
-                                              ],
+                                      // Plus icon rotating and fading out during expansion
+                                      if (animValue < 0.9)
+                                        Positioned(
+                                          left: (collapsedWidth - 21) / 2,
+                                          child: Transform.rotate(
+                                            angle: animValue * (math.pi / 2),
+                                            child: SizedBox.square(
+                                              dimension: 21,
+                                              child: Opacity(
+                                                opacity:
+                                                    (1.0 - animValue * 2.0)
+                                                        .clamp(0.0, 1.0),
+                                                child: Icon(
+                                                  LucideIcons.plus,
+                                                  size: 21,
+                                                  color: onPrimaryColor,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
 
                                       // Notification message and action content
                                       if (isExpanded)
                                         Positioned(
-                                          left: 40,
+                                          left: 18,
                                           right: 8,
                                           child: FadeTransition(
                                             opacity: _contentOpacity,
