@@ -87,6 +87,108 @@ void main() {
     });
   });
 
+  group('YankItem.displayTitle link cleaning', () {
+    test('cleans GitHub repository titles and strips redundant description', () {
+      final item = YankItem(
+        id: 'gh-1',
+        kind: ItemKind.link,
+        title: 'GitHub - NavidZamanKhan/Yank: Cross-device universal capture inbox for links, photos, audio, files, and text across iOS, Android, and macOS',
+        body: 'Cross-device universal capture inbox for links, photos, audio, files, and text across iOS, Android, and macOS',
+        url: 'https://github.com/NavidZamanKhan/Yank',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'NavidZamanKhan/Yank');
+    });
+
+    test('strips platform suffix from YouTube video title', () {
+      final item = YankItem(
+        id: 'yt-1',
+        kind: ItemKind.link,
+        title: 'Never Gonna Give You Up (Official Music Video) - YouTube',
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'Never Gonna Give You Up (Official Music Video)');
+    });
+
+    test('strips author and platform suffix from Medium article title', () {
+      final item = YankItem(
+        id: 'med-1',
+        kind: ItemKind.link,
+        title: 'Building Scalable Apps | by Tech Lead | Medium',
+        url: 'https://medium.com/@techlead/building-scalable-apps',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'Building Scalable Apps');
+    });
+
+    test('strips brand prefix from site title', () {
+      final item = YankItem(
+        id: 'flt-1',
+        kind: ItemKind.link,
+        title: 'Flutter - Build apps for any screen',
+        url: 'https://flutter.dev',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'Build apps for any screen');
+    });
+
+    test('extracts clean path from raw URL title', () {
+      final item = YankItem(
+        id: 'url-1',
+        kind: ItemKind.link,
+        title: 'https://github.com/flutter/flutter',
+        url: 'https://github.com/flutter/flutter',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'flutter/flutter');
+    });
+
+    test('extracts domain when raw URL has no path', () {
+      final item = YankItem(
+        id: 'url-2',
+        kind: ItemKind.link,
+        title: 'https://www.example.com/',
+        url: 'https://www.example.com/',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'example.com');
+    });
+
+    test('removes colon subtitle when it duplicates body', () {
+      final item = YankItem(
+        id: 'sub-1',
+        kind: ItemKind.link,
+        title: 'Product Launch: The new way to capture anything',
+        body: 'The new way to capture anything instantly across all devices.',
+        url: 'https://example.com/product',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'Product Launch');
+    });
+
+    test('preserves link title if no brands or subtitles match', () {
+      final item = YankItem(
+        id: '2',
+        kind: ItemKind.link,
+        title: 'Yanked Item 2',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'Yanked Item 2');
+    });
+
+    test('preserves non-link item titles', () {
+      final item = YankItem(
+        id: 'text-1',
+        kind: ItemKind.text,
+        title: 'My Notes: Project Checklist',
+        body: 'Project Checklist details',
+        createdAt: DateTime.now(),
+      );
+      expect(item.displayTitle, 'My Notes: Project Checklist');
+    });
+  });
+
   group('UrlMetadataService.enrichItem', () {
     test('enriches generic link item with fetched title and artwork', () async {
       final repository = await DemoLibraryRepository.open(MemoryMetadataStore());

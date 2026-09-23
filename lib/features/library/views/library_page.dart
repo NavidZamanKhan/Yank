@@ -15,7 +15,6 @@ import 'package:yank/features/settings/bloc/settings_bloc.dart';
 import 'package:yank/features/settings/views/settings_sheet.dart';
 import 'package:yank/features/library/bloc/library_bloc.dart';
 import 'package:yank/features/library/models/yank_item.dart';
-import 'package:yank/features/library/widgets/item_actions.dart';
 import 'package:yank/features/library/widgets/library_feed.dart';
 import 'package:yank/features/library/widgets/library_header.dart';
 import 'package:yank/features/library/widgets/library_navigation.dart';

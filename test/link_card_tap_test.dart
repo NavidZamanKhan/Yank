@@ -76,12 +76,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify link card is displayed with banner artwork and title
-    expect(find.text('Flutter - Build apps for any screen'), findsWidgets);
+    // Verify link card is displayed with banner artwork and clean title (without redundant brand prefix)
+    expect(find.text('Build apps for any screen'), findsWidgets);
     expect(find.byType(PosterArtwork), findsWidgets);
 
     // Tap on the link card
-    final cardFinder = find.text('Flutter - Build apps for any screen').first;
+    final cardFinder = find.text('Build apps for any screen').first;
     await tester.tap(cardFinder);
     await tester.pumpAndSettle();
 

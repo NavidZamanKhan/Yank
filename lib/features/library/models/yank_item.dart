@@ -53,7 +53,116 @@ class YankItem {
         .replaceFirst(RegExp(r'^[0-9a-fA-F]{32}_'), '')
         .replaceFirst(RegExp(r'^[0-9a-fA-F]{8}_'), '')
         .replaceFirst(RegExp(r'^share-\d+-\d+-'), '');
-    return withoutPrefix.isNotEmpty ? withoutPrefix : title;
+    var cleaned = withoutPrefix.isNotEmpty ? withoutPrefix : title;
+
+    if (kind == ItemKind.link) {
+      cleaned = _cleanLinkTitle(cleaned);
+    }
+
+    return cleaned.isNotEmpty ? cleaned : title;
+  }
+
+  String _cleanLinkTitle(String raw) {
+    var text = raw.trim();
+
+    // 1. If title is a raw URL, display clean path or domain
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      final uri = Uri.tryParse(text);
+      if (uri != null && uri.host.isNotEmpty) {
+        final path = uri.path.replaceAll(RegExp(r'^/|/$'), '');
+        if (path.isNotEmpty && !path.contains(RegExp(r'^(index|default)\.'))) {
+          text = path;
+        } else {
+          text = uri.host.replaceFirst(RegExp(r'^www\.'), '');
+        }
+      }
+    }
+
+    // 2. Strip brand prefixes and suffixes
+    final brandNames = <String>{
+      if (source.isNotEmpty && source != kind.label) source,
+      if (domain.isNotEmpty) domain,
+      if (domain.contains('.')) domain.split('.').first,
+      'GitHub',
+      'YouTube',
+      'Instagram',
+      'Facebook',
+      'Reddit',
+      'Twitter',
+      'Medium',
+      'Substack',
+      'The Verge',
+      'Wikipedia',
+      'LinkedIn',
+      'Flutter',
+    };
+
+    for (final brand in brandNames) {
+      if (brand.length < 2) continue;
+      final escaped = RegExp.escape(brand);
+      // Strip prefix: Brand - Title or Brand: Title
+      final prefixPattern = RegExp(
+        '^$escaped\\s*[-:\\u2013\\u2014|•·]\\s*',
+        caseSensitive: false,
+      );
+      text = text.replaceFirst(prefixPattern, '');
+
+      // Strip suffix: Title - Brand or Title | Brand or Title - on Brand
+      final suffixPattern = RegExp(
+        '\\s*[-:\\u2013\\u2014|•·]\\s*(?:on\\s+)?$escaped\$',
+        caseSensitive: false,
+      );
+      text = text.replaceFirst(suffixPattern, '');
+    }
+
+    // Strip author suffix: " | by Author Name"
+    final authorPattern = RegExp(
+      '\\s*[-:\\u2013\\u2014|•·]\\s*by\\s+[^|:\\u2013\\u2014•·-]+\$',
+      caseSensitive: false,
+    );
+    text = text.replaceFirst(authorPattern, '');
+
+    // 3. Colon separation: Title: Subtitle / Description
+    // e.g. "NavidZamanKhan/Yank: Cross-device universal capture inbox..."
+    if (text.contains(': ')) {
+      final parts = text.split(': ');
+      if (parts.length >= 2) {
+        final prefix = parts[0].trim();
+        final suffix = parts.sublist(1).join(': ').trim();
+
+        final isRepo = RegExp(r'^[\w.-]+/[\w.-]+$').hasMatch(prefix);
+
+        bool suffixRepeatsBody = false;
+        if (body.isNotEmpty) {
+          final b = body.trim().toLowerCase();
+          final s = suffix.toLowerCase();
+          final checkLen = s.length < 15 ? s.length : 15;
+          final sample = s.substring(0, checkLen);
+          final bCheckLen = b.length < 15 ? b.length : 15;
+          final bSample = b.substring(0, bCheckLen);
+          suffixRepeatsBody = b.contains(sample) || s.contains(bSample);
+        }
+
+        if (isRepo ||
+            suffixRepeatsBody ||
+            (source == 'GitHub' && parts.length == 2) ||
+            (prefix.length <= 40 && suffix.length > 35 && suffix.contains(' '))) {
+          if (prefix.isNotEmpty) {
+            text = prefix;
+          }
+        }
+      }
+    }
+
+    // 4. Strip any leading/trailing separator punctuation left over
+    text = text
+        .replaceAll(
+          RegExp('^[\\s\\-:|\u2013\u2014•·]+|[\\s\\-:|\u2013\u2014•·]+\$'),
+          '',
+        )
+        .trim();
+
+    return text.isNotEmpty ? text : raw;
   }
   String get domain => url == null
       ? ''

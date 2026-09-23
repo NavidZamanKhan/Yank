@@ -45,6 +45,15 @@ class YankItemCard extends StatelessWidget {
         ItemActions(item: item, onPreview: onPreview),
       ],
     );
+    final hasBanner = (item.kind == ItemKind.photo && item.artwork != null && item.artwork!.isNotEmpty) ||
+        (item.kind == ItemKind.link && item.artwork != null && item.artwork!.isNotEmpty);
+    final showBody = item.kind == ItemKind.link &&
+        !hasBanner &&
+        item.body.isNotEmpty &&
+        item.body != item.url &&
+        item.body != item.title &&
+        item.body != item.displayTitle;
+
     final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -59,14 +68,11 @@ class YankItemCard extends StatelessWidget {
                 : FontWeight.w600,
           ),
         ),
-        if (item.kind == ItemKind.link &&
-            item.body.isNotEmpty &&
-            item.body != item.url &&
-            item.body != item.title) ...[
+        if (showBody) ...[
           const SizedBox(height: 2),
           Text(
             item.body,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   height: 1.3,
@@ -77,7 +83,7 @@ class YankItemCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           _metadata(),
-          maxLines: 2,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
         ),
@@ -87,7 +93,8 @@ class YankItemCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
       child: Row(
         children: [
-          if ((item.kind == ItemKind.link || item.kind == ItemKind.file) &&
+          if ((item.kind == ItemKind.file ||
+                  (item.kind == ItemKind.link && !hasBanner)) &&
               MediaQuery.sizeOf(context).width > 360 &&
               MediaQuery.textScalerOf(context).scale(14) < 19) ...[
             Container(
