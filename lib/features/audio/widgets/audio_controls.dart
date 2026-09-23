@@ -298,7 +298,9 @@ class _MiniPlayerState extends State<MiniPlayer>
                 child: Opacity(
                   opacity: _curved.value.clamp(0.0, 1.0),
                   child: Transform.translate(
-                    offset: Offset(0.0, (1.0 - _curved.value) * 16.0),
+                    offset: MediaQuery.disableAnimationsOf(context)
+                        ? Offset.zero
+                        : Offset(0.0, (1.0 - _curved.value) * 16.0),
                     child: Container(
                       decoration: BoxDecoration(
                         color: context.colors.surface,

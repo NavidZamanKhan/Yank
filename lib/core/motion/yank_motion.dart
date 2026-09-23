@@ -31,6 +31,11 @@ class _PressScaleState extends State<PressScale> {
   @override
   Widget build(BuildContext context) {
     final reduced = MediaQuery.disableAnimationsOf(context);
+    final content = AnimatedOpacity(
+      opacity: _down && reduced ? 0.72 : 1.0,
+      duration: const Duration(milliseconds: 90),
+      child: widget.child,
+    );
     return Listener(
       onPointerDown: (_) => _set(true),
       onPointerUp: (_) => _set(false),
@@ -42,7 +47,7 @@ class _PressScaleState extends State<PressScale> {
           _down ? const Duration(milliseconds: 85) : YankMotion.settle,
         ),
         curve: _down ? Curves.easeOut : Curves.easeOutBack,
-        child: widget.child,
+        child: content,
       ),
     );
   }

@@ -247,7 +247,8 @@ class _LibraryPageState extends State<LibraryPage>
             final scale = 1.0 - (0.075 * t);
             final translateY = 55.0 * t;
             final radius = 34.0 * t;
-            final dimAlpha = (isDark ? 0.22 : 0.04) * t;
+            final dimAlpha = (isDark ? 0.22 : 0.04) *
+                (reduced ? _sheetAnimation.value.clamp(0.0, 1.0) : t);
 
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: (isDark

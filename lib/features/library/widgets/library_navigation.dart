@@ -184,9 +184,10 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                 final currentWidth =
                     collapsedWidth + (totalWidth - collapsedWidth) * animValue;
 
+                final reduced = MediaQuery.disableAnimationsOf(context);
                 final slideVal = _slideAnimation.value;
                 final targetOffset = buttonWidth + tabsGap;
-                final stretch = math.sin(slideVal * math.pi) * 8.0;
+                final stretch = reduced ? 0.0 : math.sin(slideVal * math.pi) * 8.0;
                 final pillLeft = targetOffset * slideVal - (stretch / 2.0);
                 final pillWidth = buttonWidth + stretch;
 
@@ -360,20 +361,28 @@ class _LibraryBottomNavigationState extends State<LibraryBottomNavigation>
                                               switchOutCurve:
                                                   Curves.easeInCubic,
                                               transitionBuilder:
-                                                  (child, animation) =>
-                                                      FadeTransition(
-                                                opacity: animation,
-                                                child: SlideTransition(
-                                                  position: Tween<Offset>(
-                                                    begin: const Offset(
-                                                      0.06,
-                                                      0.0,
-                                                    ),
-                                                    end: Offset.zero,
-                                                  ).animate(animation),
-                                                  child: child,
-                                                ),
-                                              ),
+                                                  (child, animation) {
+                                                final reduced = MediaQuery.disableAnimationsOf(context);
+                                                if (reduced) {
+                                                  return FadeTransition(
+                                                    opacity: animation,
+                                                    child: child,
+                                                  );
+                                                }
+                                                return FadeTransition(
+                                                  opacity: animation,
+                                                  child: SlideTransition(
+                                                    position: Tween<Offset>(
+                                                      begin: const Offset(
+                                                        0.06,
+                                                        0.0,
+                                                      ),
+                                                      end: Offset.zero,
+                                                    ).animate(animation),
+                                                    child: child,
+                                                  ),
+                                                );
+                                              },
                                               child: KeyedSubtree(
                                                 key: ValueKey(
                                                   _currentNotice?.serial,
