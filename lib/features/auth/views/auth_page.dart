@@ -415,14 +415,7 @@ class _AuthActions extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          context.read<AuthBloc>().repository.isDemo
-              ? 'Demo mode · sign-in stays on this device'
-              : 'Protected by Firebase Authentication',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
-        ),
+
       ],
     );
   }
